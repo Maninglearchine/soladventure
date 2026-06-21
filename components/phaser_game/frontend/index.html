@@ -1,0 +1,1783 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #111; overflow: hidden; font-family: 'Segoe UI Emoji', 'Apple Color Emoji', Arial, sans-serif; }
+
+#game-wrap {
+  position: relative;
+  width: 800px;
+  height: 500px;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+/* ── Quiz overlay ─────────────────────────── */
+#quiz-overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.80);
+  z-index: 200;
+  justify-content: center;
+  align-items: center;
+}
+#quiz-panel {
+  background: #12122a;
+  border-radius: 20px;
+  width: 620px;
+  max-width: calc(100% - 24px);
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,.7);
+}
+#quiz-header {
+  padding: 16px 24px;
+  text-align: center;
+}
+#quiz-concept {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: .3px;
+}
+#quiz-body { padding: 20px 26px 24px; }
+#quiz-question {
+  font-size: 17px;
+  color: #cbd5e1;
+  text-align: center;
+  line-height: 1.7;
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+.quiz-btn {
+  display: block;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 14px 18px;
+  background: #21213e;
+  border: 1.5px solid #3a3a6e;
+  border-radius: 12px;
+  color: #e2e8f0;
+  font-size: 16px;
+  text-align: left;
+  cursor: pointer;
+  transition: background .12s, border-color .12s, color .12s;
+  line-height: 1.6;
+}
+.quiz-btn:hover { background: #3a3a6e; border-color: var(--accent, #6366f1); color: #fff; }
+.quiz-btn:active { transform: scale(.98); }
+
+/* ── Feedback overlay ─────────────────────── */
+#fb-overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.72);
+  z-index: 300;
+  justify-content: center;
+  align-items: center;
+}
+#fb-panel {
+  border-radius: 20px;
+  padding: 30px 36px;
+  text-align: center;
+  min-width: 300px;
+  box-shadow: 0 16px 48px rgba(0,0,0,.6);
+}
+#fb-icon  { font-size: 44px; line-height: 1.2; }
+#fb-coins { font-size: 24px; font-weight: 700; color: #fff; margin: 10px 0 6px; }
+#fb-msg   { font-size: 13px; color: rgba(255,255,255,.88); line-height: 1.5; }
+
+/* ── World Clear overlay ──────────────────── */
+#wc-overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.90);
+  z-index: 400;
+  justify-content: center;
+  align-items: center;
+}
+#wc-panel {
+  background: linear-gradient(145deg, #111822, #0d1a11);
+  border: 2px solid #ffd700;
+  border-radius: 26px;
+  padding: 38px 52px;
+  text-align: center;
+  min-width: 380px;
+  max-width: 580px;
+  box-shadow: 0 0 60px rgba(255,215,0,.28), 0 24px 64px rgba(0,0,0,.85);
+}
+#wc-emoji  { font-size: 64px; margin-bottom: 14px; animation: wcPop .5s cubic-bezier(.34,1.56,.64,1); }
+#wc-title  { font-size: 30px; font-weight: 900; color: #ffd700; margin-bottom: 8px; }
+#wc-sub    { font-size: 16px; color: #cbd5e1; margin-bottom: 16px; }
+#wc-coins  { font-size: 20px; font-weight: 700; color: #4ade80; margin-bottom: 26px; }
+#wc-btn {
+  padding: 14px 44px;
+  font-size: 16px;
+  font-weight: 800;
+  background: #ffd700;
+  color: #1a1a1a;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform .15s, box-shadow .15s;
+}
+#wc-btn:hover { transform: scale(1.05); box-shadow: 0 6px 22px rgba(255,215,0,.55); }
+@keyframes wcPop { from { transform: scale(0.5); opacity:0; } to { transform: scale(1); opacity:1; } }
+
+/* ── Battle overlay ──────────────────────── */
+#battle-ov {
+  display:none; position:absolute; inset:0;
+  background:rgba(0,0,0,.92); z-index:350;
+  justify-content:center; align-items:center;
+}
+#battle-panel {
+  background:#10101e; border-radius:24px; width:580px;
+  max-width:calc(100% - 20px); overflow:hidden;
+  box-shadow:0 24px 64px rgba(0,0,0,.9);
+}
+#battle-content { padding:28px 26px 24px; }
+
+/* ── Speech-bubble chat layout ────────── */
+.chat-row {
+  display:flex; gap:14px; margin-bottom:16px; align-items:flex-start;
+}
+.chat-row.right { flex-direction:row-reverse; }
+.chat-col-av { flex-shrink:0; text-align:center; width:62px; }
+.chat-av     { font-size:2.8rem; line-height:1; }
+.chat-av-name {
+  font-size:11px; color:#64748b; margin-top:5px; letter-spacing:.2px;
+  width:62px; display:block; word-break:keep-all; line-height:1.3; text-align:center;
+}
+.chat-bubble {
+  position:relative; flex:1; border-radius:4px 18px 18px 18px;
+  padding:16px 20px; color:#f1f5f9; font-size:17px; line-height:1.85;
+}
+.chat-bubble p { margin:0 0 9px; }
+.chat-bubble p:last-child { margin:0; }
+/* tail pointer for left speaker */
+.chat-bubble::before {
+  content:''; position:absolute; top:0; left:-10px;
+  border:10px solid transparent;
+  border-right-color:inherit; border-top-color:inherit;
+  border-width:0 10px 10px 0;
+}
+/* Solsol — accent blue/purple */
+.chat-bubble.solsol {
+  background:#1a1a42; border:1.5px solid rgba(99,102,241,.45);
+}
+.chat-bubble.solsol::before {
+  border-right-color:#1a1a42; border-top-color:#1a1a42;
+}
+/* Villain — red, tail on right */
+.chat-bubble.villain {
+  background:#2a0f0f; border:1.5px solid rgba(239,68,68,.4);
+  border-radius:18px 4px 18px 18px;
+}
+.chat-bubble.villain::before {
+  left:auto; right:-10px;
+  border-width:0 0 10px 10px;
+  border-right-color:transparent; border-top-color:transparent;
+  border-left-color:#2a0f0f; border-bottom-color:#2a0f0f;
+}
+/* Gold reward bubble */
+.chat-bubble.gold-b {
+  background:#1e1800; border:1.5px solid rgba(255,215,0,.4);
+  border-radius:4px 18px 18px 18px;
+}
+.chat-bubble.gold-b::before {
+  border-right-color:#1e1800; border-top-color:#1e1800;
+}
+
+/* Battle UI elements */
+.bc-title-big {
+  text-align:center; font-size:22px; font-weight:800; color:#ffd700;
+  text-shadow:0 0 20px rgba(255,215,0,.55); padding:26px 12px;
+  animation:pulse 1s ease-in-out 3;
+}
+.bc-btn {
+  display:block; width:100%; padding:15px; background:var(--accent,#6366f1);
+  color:#fff; border:none; border-radius:14px; font-size:17px; font-weight:800;
+  cursor:pointer; transition:opacity .15s, transform .1s;
+}
+.bc-btn:hover  { opacity:.85; }
+.bc-btn:active { transform:scale(.97); }
+.bc-btn.danger { background:#ef4444; }
+.bc-btn.gold   { background:#ffd700; color:#1a1a1a; }
+.bc-coin-pop   { font-size:3.8rem; text-align:center; animation:floatUp .9s ease-out; }
+.bc-reward-label { text-align:center; font-size:24px; font-weight:800; color:#ffd700; margin:10px 0 5px; }
+.bc-reward-sub   { text-align:center; font-size:15px; color:#94a3b8; margin-bottom:20px; }
+.bc-streak       { text-align:center; font-size:16px; color:#4ade80; font-weight:700; margin-bottom:14px; }
+.bc-divider      { height:10px; }
+
+/* Quiz enhancements */
+#quiz-battle-label { font-size:12px; letter-spacing:2px; text-transform:uppercase; color:rgba(255,255,255,.75); margin-bottom:5px; }
+#quiz-guide        { font-size:13px; color:rgba(255,255,255,.65); margin-top:5px; }
+#quiz-panel        { animation:slideUp .4s cubic-bezier(.34,1.56,.64,1); }
+
+@keyframes slideUp {
+  from { opacity:0; transform:translateY(38px) scale(.95); }
+  to   { opacity:1; transform:translateY(0) scale(1); }
+}
+@keyframes floatUp {
+  0%   { transform:translateY(0); opacity:0; }
+  30%  { opacity:1; }
+  100% { transform:translateY(-22px); opacity:1; }
+}
+@keyframes pulse {
+  0%,100% { transform:scale(1); }
+  50%      { transform:scale(1.05); }
+}
+@keyframes shake {
+  0%,100% { transform:translateX(0); }
+  20%      { transform:translateX(-9px); }
+  40%      { transform:translateX(9px); }
+  60%      { transform:translateX(-5px); }
+  80%      { transform:translateX(5px); }
+}
+.quiz-btn.shaking { animation:shake .4s ease; border-color:#ef4444 !important; color:#ef4444 !important; }
+
+/* ── Video overlay ────────────────────────── */
+#vid-overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: #000;
+  z-index: 500;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+#vid-player {
+  width: 100%;
+  max-height: 420px;
+  outline: none;
+}
+#vid-btn-row {
+  margin-top: 18px;
+  display: flex;
+  gap: 14px;
+}
+.vid-action-btn {
+  padding: 13px 36px;
+  font-size: 16px;
+  font-weight: 800;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform .15s, box-shadow .15s;
+}
+#btn-donyo {
+  background: #22c55e;
+  color: #fff;
+}
+#btn-donyo:hover { transform: scale(1.05); box-shadow: 0 6px 20px rgba(34,197,94,.5); }
+#btn-report {
+  background: #ffd700;
+  color: #1a1a1a;
+}
+#btn-report:hover { transform: scale(1.05); box-shadow: 0 6px 20px rgba(255,215,0,.5); }
+#btn-news {
+  background: #6366f1;
+  color: #fff;
+}
+#btn-news:hover { transform: scale(1.05); box-shadow: 0 6px 20px rgba(99,102,241,.5); }
+
+/* ── Concept card ─────────────────────────── */
+#concept-card {
+  position: absolute;
+  bottom: -80px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 640px;
+  max-width: calc(100% - 24px);
+  background: rgba(20,20,46,.93);
+  border: 1px solid rgba(255,255,255,.15);
+  border-left: 4px solid rgba(255,255,255,.3);
+  border-radius: 14px;
+  padding: 11px 18px;
+  text-align: center;
+  font-size: 13px;
+  color: #e2e8f0;
+  z-index: 90;
+  pointer-events: none;
+  transition: bottom 1s cubic-bezier(.34,1.56,.64,1);
+  line-height: 1.6;
+}
+#concept-card.show { bottom: 14px; }
+
+/* ── Virtual D-pad ────────────────────────── */
+#dpad {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  display: grid;
+  grid-template: repeat(3,44px) / repeat(3,44px);
+  gap: 3px;
+  z-index: 100;
+  opacity: .72;
+}
+#dpad button {
+  background: rgba(255,255,255,.13);
+  border: 1px solid rgba(255,255,255,.25);
+  border-radius: 10px;
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+#dpad button:active, #dpad button.on { background: rgba(255,255,255,.35); }
+#dpad .gap { background: transparent !important; border: none !important; }
+</style>
+</head>
+<body>
+<div id="game-wrap">
+  <div id="game"></div>
+
+  <!-- ── Quiz overlay ───────────────────────── -->
+  <div id="quiz-overlay">
+    <div id="quiz-panel">
+      <div id="quiz-header">
+        <div id="quiz-battle-label">⚔️ 쏠쏠이의 금융 퀴즈 배틀</div>
+        <div id="quiz-concept"></div>
+        <div id="quiz-guide">가장 알맞은 답을 골라 악당을 물리쳐봐! 💪</div>
+      </div>
+      <div id="quiz-body">
+        <div id="quiz-question"></div>
+        <div id="quiz-choices"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Feedback overlay ──────────────────── -->
+  <div id="fb-overlay">
+    <div id="fb-panel">
+      <div id="fb-icon"></div>
+      <div id="fb-coins"></div>
+      <div id="fb-msg"></div>
+    </div>
+  </div>
+
+  <!-- ── World Clear overlay ───────────────── -->
+  <div id="wc-overlay">
+    <div id="wc-panel">
+      <div id="wc-emoji">🏆</div>
+      <div id="wc-title"></div>
+      <div id="wc-sub"></div>
+      <div id="wc-coins"></div>
+      <button id="wc-btn">계속하기 →</button>
+    </div>
+  </div>
+
+  <!-- ── Battle sequence overlay ─────────────── -->
+  <div id="battle-ov">
+    <div id="battle-panel">
+      <div id="battle-content"></div>
+    </div>
+  </div>
+
+  <!-- ── Video overlay ──────────────────────── -->
+  <div id="vid-overlay">
+    <div id="vid-space-msg" style="display:none; text-align:center; padding:24px 0 8px">
+      <div style="font-size:3.2rem; margin-bottom:10px">🌌</div>
+      <div style="font-size:22px; font-weight:800; color:#ffd700; margin-bottom:8px">별빛 금융 은하 클리어! ⭐</div>
+      <div style="font-size:15px; color:#94a3b8; margin-bottom:4px">주식 모험을 완료했어요! 무엇을 해볼까요?</div>
+    </div>
+    <video id="vid-player" autoplay controls></video>
+    <div id="vid-btn-row">
+      <button id="btn-donyo" class="vid-action-btn" style="display:none">🎵 동요배우기</button>
+      <button id="btn-news"  class="vid-action-btn" style="display:none">📰 주식 뉴스 보기</button>
+      <button id="btn-report" class="vid-action-btn" style="display:none">📊 리포트 보기 →</button>
+    </div>
+  </div>
+
+  <!-- ── Concept card ──────────────────────── -->
+  <div id="concept-card"></div>
+
+  <!-- ── Virtual D-pad ─────────────────────── -->
+  <div id="dpad">
+    <div class="gap"></div><button id="dp-up">↑</button><div class="gap"></div>
+    <button id="dp-left">←</button><div class="gap"></div><button id="dp-right">→</button>
+    <div class="gap"></div><button id="dp-down">↓</button><div class="gap"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════
+//  STREAMLIT COMPONENT PROTOCOL
+// ═══════════════════════════════════════════════════════
+let _game = null, _initialized = false;
+
+window.parent.postMessage(
+  { isStreamlitMessage: true, type: 'streamlit:componentReady', apiVersion: 1 }, '*'
+);
+
+window.addEventListener('message', ev => {
+  const d = ev.data;
+  if (!d || d.type !== 'streamlit:render') return;
+  const args = d.args || {};
+  if (!_initialized) {
+    window.GCFG = args;
+    window.GS   = {
+      coins: args.coins || 50,
+      done:  new Set(args.completed_missions || []),
+      coinFloor: 0,
+    };
+    applyThemeCSS(args.world || 'dinosaur');
+    startPhaser();
+    _initialized = true;
+  } else {
+    // Re-render after Python rerun — update state only, do not restart Phaser
+    window.GS.done = new Set(args.completed_missions || []);
+    if (args.coins > window.GS.coins) {
+      window.GS.coins = args.coins;
+      const sc = _game?.scene?.getScene('G');
+      if (sc) sc.refreshHUD();
+    }
+  }
+});
+
+function setVal(v) {
+  window.parent.postMessage(
+    { isStreamlitMessage: true, type: 'streamlit:setComponentValue', value: v }, '*'
+  );
+}
+function setHeight(h) {
+  window.parent.postMessage(
+    { isStreamlitMessage: true, type: 'streamlit:setFrameHeight', height: h }, '*'
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+//  THEMES  (enemy names per world + npc type)
+// ═══════════════════════════════════════════════════════
+const THEMES = {
+  dinosaur: {
+    bg: '#2d5a1b', bgInt: 0x2d5a1b,
+    floor: [0x3d7a25, 0x336820], wall: 0x1a3a0f,
+    coin: 0xFFD700, enemy: 0x8B0000,
+    player: 0x22c55e, accent: '#22c55e', accentInt: 0x22c55e,
+    emoji: '🦕', name: '공룡 정글',
+    enemies: { patrol: '랩터', chaser: '티렉스', boss: '메가로돈' },
+  },
+  space: {
+    bg: '#0a0a2e', bgInt: 0x0a0a2e,
+    floor: [0x1a1a4e, 0x151545], wall: 0x3a3a6e,
+    coin: 0x00FFFF, enemy: 0xFF4500,
+    player: 0x6366f1, accent: '#6366f1', accentInt: 0x6366f1,
+    emoji: '🚀', name: '우주 정거장',
+    enemies: { patrol: '외계인', chaser: '전투 로봇', boss: '블랙홀' },
+  },
+  magic: {
+    bg: '#2e0854', bgInt: 0x2e0854,
+    floor: [0x4a0e8f, 0x400c80], wall: 0x1a0530,
+    coin: 0xFFD700, enemy: 0xFF1493,
+    player: 0xa855f7, accent: '#a855f7', accentInt: 0xa855f7,
+    emoji: '✨', name: '마법 왕국',
+    enemies: { patrol: '고블린', chaser: '마녀', boss: '드래곤' },
+  },
+  ocean: {
+    bg: '#001a3e', bgInt: 0x001a3e,
+    floor: [0x002d6e, 0x002560], wall: 0x004a9f,
+    coin: 0x7FFFD4, enemy: 0xFF6347,
+    player: 0x0ea5e9, accent: '#0ea5e9', accentInt: 0x0ea5e9,
+    emoji: '🐋', name: '심해 왕국',
+    enemies: { patrol: '복어', chaser: '상어', boss: '크라켄' },
+  },
+};
+
+// ═══════════════════════════════════════════════════════
+//  BATTLE DIALOGUES  (world-specific encounter text)
+// ═══════════════════════════════════════════════════════
+const BATTLE_DIALOGUES = {
+  common: {
+    encounter: [
+      '앗! {villainName}이(가) 나타났어!',
+      '조심해, {nickname}아! 쏠코인을 빼앗으려 하고 있어!',
+    ],
+    solsolBeforeQuiz: [
+      '걱정 마, {nickname}아! 금융 지식이 가장 강한 무기야!',
+      '문제를 잘 읽고 가장 알맞은 답을 골라봐!',
+      '쏠코인의 빛이 돌아올 거야. 같이 싸우자! 💪',
+    ],
+    correct: [
+      '정답이야! 정말 잘했어, {nickname}아! 🌟',
+      '대단해! 금융 지식으로 악당의 장난 에너지를 약하게 만들었어!',
+      '바로 그거야! 쏠코인의 힘이 돌아오고 있어!',
+      '완벽해! 돈을 현명하게 쓰는 힘이 느껴져!',
+    ],
+    wrongHint: [
+      '괜찮아, {nickname}아. 다시 한번 생각해보자!',
+      '돈을 쓰기 전에 꼭 한 번 더 생각하면 좋아.',
+      '필요한 것과 갖고 싶은 것을 나눠서 생각해볼까?',
+      '정답은 가장 계획적인 선택에 가까워!',
+    ],
+    villainWrong: [
+      '크크큭! 아직 멀었구나!',
+      '그 선택은 내 함정에 가까웠어!',
+      '조금만 더 생각해보라고! 쉽지 않지?',
+    ],
+    streak2: '오! 연속 정답이야! 쏠쏠이가 기뻐하고 있어! 😆',
+    streak3: '대단해! 3연속이야! 금융 감각이 넘쳐! 🔥',
+    streak5: '믿을 수 없어! 금융 모험가의 재능이 보여! 🏆',
+  },
+  space: {
+    villainName: '블랙홀 먹깨비', villainEmoji: '🌑', coinName: '스타 쏠코인',
+    villainIntro: [
+      '크크큭! 쏠코인은 전부 내 블랙홀 주머니에 넣어버렸다!',
+      '생각 없이 돈을 쓰는 친구들은 내 함정에 쉽게 빠지지!',
+      '과연 이 문제를 풀 수 있을까? 어림없어!',
+    ],
+    battleTitle: '⚔️ 금융 퀴즈로 블랙홀 먹깨비를 물리쳐라!',
+    villainDefeat: [
+      '으악...!! 내 블랙홀 주머니가 찢어지고 있어!',
+      '쏠코인이 빠져나간다아아! 금융 지식이 이렇게 강하다니!',
+      '다음엔 더 어려운 문제를 가져오겠다! 두고봐!',
+    ],
+    rewardCoin: '⭐ 스타 쏠코인 +1', rewardText: '별빛 금융 에너지가 되살아났어!',
+  },
+  ocean: {
+    villainName: '낭비 문어', villainEmoji: '🐙', coinName: '진주 쏠코인',
+    villainIntro: [
+      '흐흐! 사고 싶은 건 전부 사야지!',
+      '저축은 심심하고, 계획은 귀찮잖아~',
+      '내 낭비 먹물을 피해볼 수 있겠어?',
+    ],
+    battleTitle: '⚔️ 금융 퀴즈로 낭비 문어를 물리쳐라!',
+    villainDefeat: [
+      '으악...!! 내 낭비 먹물이 사라졌어!',
+      '계획적인 소비라니... 이렇게 강할 줄은 몰랐어!',
+      '이번엔 물러나지만 다시 돌아올 거야!',
+    ],
+    rewardCoin: '🫧 진주 쏠코인 +1', rewardText: '저금섬의 파도가 다시 반짝이기 시작했어!',
+  },
+  magic: {
+    villainName: '충동구매 마법사', villainEmoji: '🧙', coinName: '마법 쏠코인',
+    villainIntro: [
+      '비비디 바비디 낭비!',
+      '갖고 싶은 건 고민하지 말고 바로 사버리는 거야!',
+      '내 충동구매 마법을 풀 수 있겠어?',
+    ],
+    battleTitle: '⚔️ 금융 퀴즈로 충동구매 마법사를 물리쳐라!',
+    villainDefeat: [
+      '으악...!! 내 충동구매 마법이 풀렸어!',
+      '생각하고 소비하는 힘이라니...!',
+      '다음에는 더 강한 주문을 준비하겠다!',
+    ],
+    rewardCoin: '✨ 마법 쏠코인 +1', rewardText: '마법왕국의 쏠코인이 다시 빛나기 시작했어!',
+  },
+  dinosaur: {
+    villainName: '욕심 공룡왕', villainEmoji: '🦖', coinName: '황금 쏠코인',
+    villainIntro: [
+      'RAWR! 이 정글의 쏠코인은 전부 내 것이다!',
+      '어린 탐험가가 날 이길 수 있을 것 같아?',
+      '황금 쏠코인을 되찾으려면 내 문제를 풀어봐!',
+    ],
+    battleTitle: '⚔️ 금융 퀴즈로 공룡왕을 물리쳐라!',
+    villainDefeat: [
+      'RAAAWR?! 내 황금 쏠코인이 빠져나가고 있어!',
+      '금융 지식이 이렇게 강하다니... 나의 패배다!',
+      '언젠가 다시 돌아올 테다!',
+    ],
+    rewardCoin: '🌟 황금 쏠코인 +1', rewardText: '공룡 정글에 평화가 돌아왔어!',
+  },
+};
+
+function applyThemeCSS(worldId) {
+  const t = THEMES[worldId] || THEMES.dinosaur;
+  document.documentElement.style.setProperty('--accent', t.accent);
+  document.getElementById('quiz-header').style.background = t.accent;
+  const wp = document.getElementById('wc-panel');
+  if (wp) wp.style.borderColor = t.accent;
+}
+
+// ═══════════════════════════════════════════════════════
+//  TILE MAP  (25 × 16, each tile = 32 px)
+// ═══════════════════════════════════════════════════════
+const T = 32, COLS = 25, ROWS = 16;
+const MAP_PX_W = COLS * T;   // 800
+const MAP_PX_H = ROWS * T;   // 512
+
+/* 0 = floor, 1 = wall */
+const MAP = [
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,1,1,0,0,0,1,1,0,0,0,0,0,0,0,1,1,0,0,0,1,1,0,1],
+  [1,0,1,0,0,0,0,0,1,0,1,0,0,0,1,0,0,1,0,0,0,0,1,0,1],
+  [1,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1],
+  [1,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,1,0,0,0,1,0,1],
+  [1,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,1],
+  [1,0,1,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,1,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,1,0,0,0,0,0,0,0,1,0,1,0,1,0,0,0,0,0,0,0,1,0,1],
+  [1,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,1],
+  [1,0,1,1,0,0,0,0,0,1,0,0,1,0,0,1,0,0,0,0,1,1,0,0,1],
+  [1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1],
+  [1,0,0,0,1,0,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,1],
+  [1,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+];
+// Row 8 is open corridor — ensures top↔bottom connectivity
+
+// ═══════════════════════════════════════════════════════
+//  GAME SCENE
+// ═══════════════════════════════════════════════════════
+class GameScene extends Phaser.Scene {
+  constructor() { super({ key: 'G' }); }
+
+  preload() {
+    const charMap = {
+      '쏠쏠이': 'assets/characters/solsol.png',
+      '몰리':   'assets/characters/molly.png',
+      '쏠리':   'assets/characters/rino.png',
+    };
+    const path = charMap[window.GCFG?.character_name];
+    if (path) this.load.image('char_player', path);
+  }
+
+  create() {
+    this.th         = THEMES[window.GCFG?.world] || THEMES.dinosaur;
+    this.cfg        = window.GCFG || {};
+    this.quizOpen   = false;
+    this.activeNPC  = null;
+    this.activeNPCType = null;
+    this.activeQuiz = null;
+    this.patrolNPC  = null;
+    this.chaserNPC  = null;
+    this.bossNPC    = null;
+    this.bossAura   = null;
+    this.bossDefeated = false;
+    this.correctStreak = 0;
+    this.startTs    = Date.now();
+    this.floorCoins = 0;
+
+    this.physics.world.setBounds(0, 0, MAP_PX_W, MAP_PX_H);
+
+    this._buildMap();
+    this._makeAllTextures();
+    this._spawnPlayer();
+    this._spawnCoins();
+    this._spawnNPCs();
+    this._setupPhysics();
+    this._setupInput();
+    this._buildHUD();
+    this._setupDpad();
+    this._setupParticles();
+
+    this.cameras.main.setBounds(0, 0, MAP_PX_W, MAP_PX_H);
+    this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
+
+    setHeight(510);
+  }
+
+  // ── Tile map ──────────────────────────────────────────
+  _buildMap() {
+    const t = this.th;
+    const fg = this.add.graphics().setDepth(0);
+    const wg = this.add.graphics().setDepth(1);
+    this.walls = this.physics.add.staticGroup();
+
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const x = c*T, y = r*T;
+        if (MAP[r][c] === 1) {
+          wg.fillStyle(t.wall, 1);
+          wg.fillRect(x+1, y+1, T-2, T-2);
+          wg.lineStyle(1, 0x000000, 0.45);
+          wg.strokeRect(x, y, T, T);
+          const z = this.add.zone(x+T/2, y+T/2, T, T);
+          this.physics.world.enable(z, Phaser.Physics.Arcade.STATIC_BODY);
+          this.walls.add(z);
+        } else {
+          fg.fillStyle((r+c)%2===0 ? t.floor[0] : t.floor[1], 1);
+          fg.fillRect(x, y, T, T);
+        }
+      }
+    }
+  }
+
+  // ── Textures: player + coin + 3 NPC types ────────────
+  _makeAllTextures() {
+    const t = this.th;
+    const w = this.cfg.world || 'dinosaur';
+
+    /* ── Player ── */
+    const pg = this.make.graphics({ add: false });
+    pg.fillStyle(0x000000, 0.22); pg.fillEllipse(20,37,26,9);
+    pg.fillStyle(t.player, 1);   pg.fillCircle(20,20,15);
+    if (w==='dinosaur') {
+      pg.fillStyle(0xffd700,1); pg.fillTriangle(16,6,24,6,20,-4);
+    } else if (w==='space') {
+      pg.lineStyle(3,0xffffff,0.65); pg.strokeCircle(20,20,17);
+      pg.fillStyle(0xffffff,0.2);   pg.fillCircle(20,16,10);
+    } else if (w==='magic') {
+      pg.fillStyle(0x1a0040,1); pg.fillTriangle(12,6,28,6,20,-7);
+      pg.fillStyle(0x3d009e,1); pg.fillEllipse(20,6,22,7);
+    } else if (w==='ocean') {
+      pg.lineStyle(2.5,0x7FFFD4,0.9); pg.beginPath();
+      for(let i=0;i<=14;i++){const px=13+i,py=23+Math.sin(i*.8)*3;i===0?pg.moveTo(px,py):pg.lineTo(px,py);}
+      pg.strokePath();
+    }
+    pg.fillStyle(0xffffff,1); pg.fillCircle(15,17,5); pg.fillCircle(25,17,5);
+    pg.fillStyle(0x111111,1); pg.fillCircle(16,17,3); pg.fillCircle(26,17,3);
+    pg.fillStyle(0xffffff,1); pg.fillCircle(17,16,1.3); pg.fillCircle(27,16,1.3);
+    pg.lineStyle(2,0xffffff,0.55);
+    pg.beginPath(); pg.moveTo(14,26); pg.lineTo(17,29); pg.lineTo(20,31); pg.lineTo(23,29); pg.lineTo(26,26); pg.strokePath();
+    pg.generateTexture('player',40,42); pg.destroy();
+
+    /* ── Coin ── */
+    const cg = this.make.graphics({ add: false });
+    cg.fillStyle(t.coin,1); cg.fillCircle(12,12,11);
+    cg.fillStyle(0xffffff,0.28); cg.fillCircle(9,8,4.5);
+    cg.lineStyle(2,0xffffff,0.35); cg.strokeCircle(12,12,8.5);
+    cg.generateTexture('coin',24,24); cg.destroy();
+
+    /* ── NPC A: Patrol — angular, spiky patroller ── */
+    const na = this.make.graphics({ add: false });
+    na.fillStyle(t.enemy, 1);
+    na.fillRect(4, 7, 24, 20);
+    [[6,7],[11,7],[16,7],[22,7]].forEach(([sx]) => na.fillTriangle(sx-3,7,sx+3,7,sx,1));
+    na.fillStyle(0xffffff,1); na.fillRect(7,12,8,7); na.fillRect(17,12,8,7);
+    na.fillStyle(0x111111,1); na.fillRect(9,13,5,5); na.fillRect(19,13,5,5);
+    na.lineStyle(2.5,0x000000,1);
+    na.beginPath(); na.moveTo(7,11);  na.lineTo(15,14); na.strokePath();
+    na.beginPath(); na.moveTo(25,11); na.lineTo(17,14); na.strokePath();
+    na.fillStyle(0xffffff,0.9);
+    [[5,27],[9,27],[13,27],[17,27],[21,27],[25,27]].forEach(([x,y])=>na.fillRect(x,y,3,3));
+    na.generateTexture('npc_a',32,32); na.destroy();
+
+    /* ── NPC B: Chaser — round, frenzied pursuer ── */
+    const nb = this.make.graphics({ add: false });
+    nb.fillStyle(t.enemy,1); nb.fillCircle(16,16,14);
+    // Speed lines on left
+    nb.lineStyle(1.5,0xffffff,0.35);
+    [-4,0,4].forEach(dy => {
+      nb.beginPath(); nb.moveTo(0,16+dy); nb.lineTo(5,16+dy); nb.strokePath();
+    });
+    // Eyes (white sclera)
+    nb.fillStyle(0xffffff,1); nb.fillCircle(11,13,6); nb.fillCircle(21,13,6);
+    // Red angry pupils
+    nb.fillStyle(0xff2200,1); nb.fillCircle(12,13,4); nb.fillCircle(22,13,4);
+    nb.fillStyle(0x000000,1); nb.fillCircle(13,13,2.5); nb.fillCircle(23,13,2.5);
+    nb.fillStyle(0xffffff,1); nb.fillCircle(14,11,1.5); nb.fillCircle(24,11,1.5);
+    // Jagged angry mouth
+    nb.lineStyle(2.5,0xffffff,0.9);
+    nb.beginPath();
+    nb.moveTo(8,23); nb.lineTo(12,26); nb.lineTo(16,23); nb.lineTo(20,26); nb.lineTo(24,23);
+    nb.strokePath();
+    nb.generateTexture('npc_b',32,32); nb.destroy();
+
+    /* ── NPC C: Boss — crowned, imposing (drawn at 36×40, scaled ×2) ── */
+    const nc = this.make.graphics({ add: false });
+    nc.fillStyle(t.enemy,1); nc.fillRoundedRect(2,11,32,26,6);
+    // Crown
+    nc.fillStyle(0xffd700,1); nc.fillRect(4,6,28,7);
+    nc.fillTriangle(4,6,9,6,6,0); nc.fillTriangle(15,6,21,6,18,1); nc.fillTriangle(27,6,32,6,30,0);
+    nc.fillStyle(0xff4444,1); nc.fillCircle(6.5,4,2);
+    nc.fillStyle(0x4488ff,1); nc.fillCircle(18,2,2.5);
+    nc.fillStyle(0x44cc44,1); nc.fillCircle(30.5,4,2);
+    // Glowing eyes
+    nc.fillStyle(0xffff00,1); nc.fillCircle(13,24,7); nc.fillCircle(25,24,7);
+    nc.fillStyle(0xff4400,1); nc.fillCircle(13,24,5); nc.fillCircle(25,24,5);
+    nc.fillStyle(0x220000,1); nc.fillCircle(13,24,3); nc.fillCircle(25,24,3);
+    nc.fillStyle(0xffffff,0.8); nc.fillCircle(14,22,1.5); nc.fillCircle(26,22,1.5);
+    // Grim mouth
+    nc.lineStyle(3,0xffffff,0.75);
+    nc.beginPath(); nc.moveTo(8,34); nc.lineTo(28,34); nc.strokePath();
+    nc.fillStyle(0xffffff,0.9);
+    [[9,33],[13,33],[17,33],[21,33],[25,33]].forEach(([x,y])=>nc.fillRect(x,y,3,4));
+    nc.generateTexture('npc_c',36,40); nc.destroy();
+
+    /* ── Coin particle: tiny gold circle ── */
+    const cp = this.make.graphics({ add: false });
+    cp.fillStyle(0xFFD700,1); cp.fillCircle(4,4,4);
+    cp.generateTexture('coin_p',8,8); cp.destroy();
+
+    /* ── Star particle: bright sparkle for boss clear ── */
+    const sp = this.make.graphics({ add: false });
+    sp.fillStyle(0xFFFFAA,1); sp.fillCircle(5,5,5);
+    sp.generateTexture('star_p',10,10); sp.destroy();
+  }
+
+  // ── Particle systems ──────────────────────────────────
+  _setupParticles() {
+    // Coin collect burst (world-space — follows camera)
+    this.coinParticles = this.add.particles(0, 0, 'coin_p', {
+      speed:    { min: 80,  max: 190 },
+      scale:    { start: 0.9, end: 0 },
+      alpha:    { start: 1,   end: 0 },
+      lifespan: 640,
+      emitting: false,
+    }).setDepth(25);
+
+    // Boss-clear star burst (screen-space — fixed)
+    this.starParticles = this.add.particles(400, 250, 'star_p', {
+      speed:    { min: 120, max: 320 },
+      scale:    { start: 1.2, end: 0 },
+      alpha:    { start: 1,   end: 0 },
+      lifespan: 1100,
+      angle:    { min: 0, max: 360 },
+      emitting: false,
+    }).setDepth(63).setScrollFactor(0);
+  }
+
+  // ── Player ────────────────────────────────────────────
+  _spawnPlayer() {
+    const key = this.textures.exists('char_player') ? 'char_player' : 'player';
+    this.player = this.physics.add.sprite(2*T+16, 1*T+16, key);
+    if (key === 'char_player') this.player.setDisplaySize(40, 40);
+    this.player.setDepth(10).setCollideWorldBounds(true);
+    this.player.body.setSize(22, 22);
+  }
+
+  // ── Coins ─────────────────────────────────────────────
+  _spawnCoins() {
+    this.coinGrp = this.physics.add.staticGroup();
+    const valid = [];
+    for (let r=1; r<ROWS-1; r++)
+      for (let c=1; c<COLS-1; c++)
+        if (MAP[r][c]===0 && !(r<2&&c<3))
+          valid.push({r,c});
+    Phaser.Utils.Array.Shuffle(valid);
+    valid.slice(0,8).forEach(({r,c}) => {
+      const coin = this.coinGrp.create(c*T+16, r*T+16, 'coin');
+      coin.setDepth(5);
+      this.tweens.add({ targets:coin, scaleX:1.18,scaleY:0.85, duration:700, yoyo:true, repeat:-1, ease:'Sine.easeInOut' });
+    });
+  }
+
+  // ── NPC Spawning ──────────────────────────────────────
+
+  _spawnNPCs() {
+    this._spawnPatrol();
+    this._spawnChaser();
+    this._spawnBoss();
+  }
+
+  /** Type A: linear back-and-forth patrol on row 1 (top-right open area) */
+  _spawnPatrol() {
+    const quiz = this._getQuiz('patrol');
+    const qid  = quiz?.id || `${this.cfg.world}_npc_patrol`;
+    if (window.GS.done.has(qid)) return;
+
+    // Row 1 cols 13-22 are all floor
+    const startX = 18*T+16, startY = 1*T+16;
+    const npc = this.physics.add.sprite(startX, startY, 'npc_a');
+    npc.setDepth(9).setCollideWorldBounds(true);
+    npc.body.setSize(26,24);
+    npc.npcType   = 'patrol';
+    npc.quizId    = qid;
+    npc.patrolMin = 13*T + 16;
+    npc.patrolMax = 22*T + 16;
+    npc.vxPatrol  = 60;
+    npc.setVelocityX(60);
+
+    npc.lbl = this.add.text(startX, startY-28,
+      `⚡ ${this.th.enemies?.patrol || 'NPC'}`,
+      { fontSize:'11px', backgroundColor:'rgba(0,0,0,.65)', padding:{x:4,y:2}, color:'#fff' }
+    ).setOrigin(0.5).setDepth(9);
+
+    this.patrolNPC = npc;
+  }
+
+  /** Type B: chases player within 200 px, returns home when > 300 px */
+  _spawnChaser() {
+    const quiz = this._getQuiz('chaser');
+    const qid  = quiz?.id || `${this.cfg.world}_npc_chaser`;
+    if (window.GS.done.has(qid)) return;
+
+    // Row 11 col 5
+    const homeX = 5*T+16, homeY = 11*T+16;
+    const npc = this.physics.add.sprite(homeX, homeY, 'npc_b');
+    npc.setDepth(9).setCollideWorldBounds(true);
+    npc.body.setSize(26,26);
+    npc.npcType  = 'chaser';
+    npc.quizId   = qid;
+    npc.homeX    = homeX;
+    npc.homeY    = homeY;
+    npc.isChasing = false;
+
+    npc.lbl = this.add.text(homeX, homeY-28,
+      `🔥 ${this.th.enemies?.chaser || 'NPC'}`,
+      { fontSize:'11px', backgroundColor:'rgba(80,0,0,.7)', padding:{x:4,y:2}, color:'#ffa0a0' }
+    ).setOrigin(0.5).setDepth(9);
+
+    this.chaserNPC = npc;
+  }
+
+  /** Type C: stationary boss at map center, proximity trigger, 2× scale */
+  _spawnBoss() {
+    const quiz = this._getQuiz('boss');
+    const qid  = quiz?.id || `${this.cfg.world}_npc_boss`;
+    if (window.GS.done.has(qid)) return;
+
+    // Row 8 col 12 (center of map)
+    const bx = 12*T+16, by = 8*T+16;
+    const npc = this.add.sprite(bx, by, 'npc_c');  // static sprite, no physics
+    npc.setDepth(11).setScale(2.0);
+    npc.npcType = 'boss';
+    npc.quizId  = qid;
+
+    npc.lbl = this.add.text(bx, by - 54,
+      `💀 ${this.th.enemies?.boss || 'BOSS'}`,
+      { fontSize:'13px', backgroundColor:'rgba(80,0,0,.9)',
+        padding:{x:8,y:4}, color:'#ffd700', fontStyle:'bold' }
+    ).setOrigin(0.5).setDepth(12);
+
+    // Pulsing aura graphics (drawn behind boss)
+    this.bossAura = this.add.graphics().setDepth(7);
+
+    this.bossNPC      = npc;
+    this.bossDefeated = false;
+  }
+
+  // ── Physics setup ─────────────────────────────────────
+  _setupPhysics() {
+    this.physics.add.collider(this.player, this.walls);
+
+    if (this.patrolNPC) {
+      this.physics.add.collider(this.patrolNPC, this.walls);
+      this.physics.add.overlap(this.player, this.patrolNPC,
+        () => { if (!this.quizOpen && this.patrolNPC.active) this._triggerQuiz(this.patrolNPC); },
+        null, this
+      );
+    }
+
+    if (this.chaserNPC) {
+      this.physics.add.collider(this.chaserNPC, this.walls);
+      this.physics.add.overlap(this.player, this.chaserNPC,
+        () => { if (!this.quizOpen && this.chaserNPC.active) this._triggerQuiz(this.chaserNPC); },
+        null, this
+      );
+    }
+    // Boss uses proximity check in update()
+
+    this.physics.add.overlap(this.player, this.coinGrp,
+      (_p, coin) => this._collectCoin(coin), null, this
+    );
+  }
+
+  // ── Input ─────────────────────────────────────────────
+  _setupInput() {
+    this.cursors = this.input.keyboard.createCursorKeys();
+    this.wasd    = this.input.keyboard.addKeys({
+      up:    Phaser.Input.Keyboard.KeyCodes.W,
+      down:  Phaser.Input.Keyboard.KeyCodes.S,
+      left:  Phaser.Input.Keyboard.KeyCodes.A,
+      right: Phaser.Input.Keyboard.KeyCodes.D,
+    });
+    this.input.keyboard.on('keydown-ESC', () => this._endGame());
+  }
+
+  // ── HUD ───────────────────────────────────────────────
+  _buildHUD() {
+    const SW=800, cfg=this.cfg, t=this.th;
+    const bg = this.add.graphics().setScrollFactor(0).setDepth(50);
+    bg.fillStyle(0x000000,0.68); bg.fillRect(0,0,SW,36);
+
+    this.add.text(10,9,`${t.emoji} ${cfg.character_name||'탐험가'}  Lv.${cfg.level||1}`,
+      {fontSize:'14px',color:'#fff',fontFamily:'Arial',fontStyle:'bold'}
+    ).setScrollFactor(0).setDepth(51);
+
+    this.hudCoins = this.add.text(SW/2,9,`💰 ${window.GS.coins}`,
+      {fontSize:'15px',color:'#FFD700',fontFamily:'Arial',fontStyle:'bold'}
+    ).setScrollFactor(0).setDepth(51).setOrigin(0.5,0);
+
+    this.add.text(SW-10,9,'← → ↑ ↓ / WASD  |  ESC: 종료',
+      {fontSize:'11px',color:'rgba(255,255,255,.42)',fontFamily:'Arial'}
+    ).setScrollFactor(0).setDepth(51).setOrigin(1,0);
+  }
+
+  refreshHUD() {
+    if (this.hudCoins) this.hudCoins.setText(`💰 ${window.GS.coins}`);
+  }
+
+  // ── D-pad ─────────────────────────────────────────────
+  _setupDpad() {
+    this.dp = { up:false,down:false,left:false,right:false };
+    const dp = this.dp;
+    const ids = { 'dp-up':'up','dp-down':'down','dp-left':'left','dp-right':'right' };
+    Object.entries(ids).forEach(([id,dir]) => {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      btn.addEventListener('pointerdown', e => { e.preventDefault(); dp[dir]=true;  btn.classList.add('on'); });
+      btn.addEventListener('pointerup',   e => { e.preventDefault(); dp[dir]=false; btn.classList.remove('on'); });
+      btn.addEventListener('pointerleave',()  => { dp[dir]=false; btn.classList.remove('on'); });
+    });
+  }
+
+  // ── Coin collection ───────────────────────────────────
+  _collectCoin(coin) {
+    this.tweens.killTweensOf(coin);
+    const {x,y} = coin;
+    coin.destroy();
+    this.floorCoins++;
+    window.GS.coins += 10;
+    this.refreshHUD();
+
+    // Float "+10" text
+    const ft = this.add.text(x,y,'+10 💰',
+      {fontSize:'15px',color:'#FFD700',fontStyle:'bold',fontFamily:'Arial'}
+    ).setDepth(20).setOrigin(0.5);
+    this.tweens.add({ targets:ft, y:y-52, alpha:0, duration:900, ease:'Power2', onComplete:()=>ft.destroy() });
+
+    // Particle burst at coin position
+    if (this.coinParticles) this.coinParticles.emitParticleAt(x, y, 10);
+
+    window.parent.postMessage({ type:'COIN_COLLECTED', total_coins:window.GS.coins }, '*');
+    // Concept card now only appears after defeating an NPC, not on coin collect
+  }
+
+  // ── Quiz lookup ───────────────────────────────────────
+  _getQuiz(npcType) {
+    // Prefer preloaded quizzes from Python (OpenAI generated)
+    const quizzes = window.GCFG?.quizzes || [];
+    const q = quizzes.find(q => q.enemy_type === npcType);
+    if (q) return q;
+
+    // Fallback: use missions array
+    const missions = window.GCFG?.missions || [];
+    const idx = { patrol:0, chaser:1, boss:2 }[npcType] ?? 0;
+    const m   = missions[idx];
+    if (m) return { ...m, enemy_type: npcType, id: `${this.cfg.world}_npc_${npcType}` };
+
+    return null;
+  }
+
+  // ── Quiz trigger ──────────────────────────────────────
+  _triggerQuiz(npc) {
+    if (this.quizOpen || !npc.active) return;
+
+    const npcType = npc.npcType;
+    const quiz = this._getQuiz(npcType);
+    if (!quiz) return;
+
+    if (window.GS.done.has(npc.quizId)) {
+      if (npcType !== 'boss') this._destroyNPC(npc);
+      else this.bossDefeated = true;
+      return;
+    }
+
+    this.quizOpen      = true;
+    this.activeNPC     = npc;
+    this.activeNPCType = npcType;
+    this.activeQuiz    = quiz;
+
+    this.player.setVelocity(0,0);
+    this.player.body.enable = false;
+
+    if (npcType !== 'boss') npc.setVelocity(0,0);
+
+    this.cameras.main.shake(220, 0.009);
+    this.time.delayedCall(150, () => this._battlePhaseEncounter());
+  }
+
+  // ── Quiz DOM overlay ──────────────────────────────────
+  _showQuizDOM(quiz) {
+    const t  = this.th;
+    const cc = quiz.concept_card || {};
+    const typeLabel = { patrol:'기초 퀴즈', chaser:'중급 퀴즈', boss:'🏆 보스 퀴즈' }[this.activeNPCType] || '퀴즈';
+    const enemyName = this.th.enemies?.[this.activeNPCType] || 'NPC';
+
+    document.getElementById('quiz-concept').textContent =
+      `${t.emoji} ${enemyName}의 도전! — ${typeLabel}`;
+    document.getElementById('quiz-question').textContent = quiz.question;
+
+    const box  = document.getElementById('quiz-choices');
+    box.innerHTML = '';
+    const nums = ['① ','② ','③ '];
+    (quiz.choices || []).forEach((ch, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'quiz-btn';
+      btn.textContent = nums[i] + ch.text;
+      btn.onclick = () => this._handleAnswer(ch, quiz, btn);
+      box.appendChild(btn);
+    });
+
+    // Re-trigger slide-up animation
+    const panel = document.getElementById('quiz-panel');
+    panel.style.animation = 'none';
+    void panel.offsetWidth;
+    panel.style.animation = 'slideUp .4s cubic-bezier(.34,1.56,.64,1)';
+
+    document.getElementById('quiz-overlay').style.display = 'flex';
+  }
+
+  // ── Answer handling ───────────────────────────────────
+  _handleAnswer(choice, quiz, clickedBtn) {
+    const correct = !!choice.correct;
+    const npcType = this.activeNPCType || 'patrol';
+
+    if (!correct) {
+      // Shake the wrong button, keep quiz open
+      if (clickedBtn) {
+        clickedBtn.classList.add('shaking');
+        setTimeout(() => clickedBtn.classList.remove('shaking'), 450);
+      }
+      this._battlePhaseWrong();
+      return;
+    }
+
+    // ── Correct ──────────────────────────────────────────
+    const earned = choice.coins ?? 15;
+    window.GS.coins = Math.max(0, window.GS.coins + earned);
+    window.GS.done.add(quiz.id || `${this.cfg.world}_npc_${npcType}`);
+    if (npcType === 'boss') this.bossDefeated = true;
+    this.correctStreak++;
+    this.refreshHUD();
+
+    // Close quiz, notify Python, show victory sequence
+    document.getElementById('quiz-overlay').style.display = 'none';
+
+    setVal({
+      type: 'QUIZ_RESULT', ts: Date.now(),
+      mission_id: quiz.id || `${this.cfg.world}_npc_${npcType}`,
+      correct: true, coins_earned: earned, total_coins: window.GS.coins,
+      concept: (quiz.concept_card||{}).title || '',
+      character_name: this.cfg.character_name || '',
+      npc_type: npcType,
+    });
+
+    this._battlePhaseCorrect(earned);
+  }
+
+  // ── Feedback DOM overlay ──────────────────────────────
+  _showFeedbackDOM(correct, feedback, earned, quiz, npcType) {
+    const panel = document.getElementById('fb-panel');
+    panel.style.background = correct ? '#15803d' : '#be123c';
+    document.getElementById('fb-icon').textContent  = correct ? '🎉' : '😅';
+    document.getElementById('fb-coins').textContent = `${earned>=0?'+':''}${earned} 💰`;
+    document.getElementById('fb-msg').textContent   = feedback;
+    document.getElementById('fb-overlay').style.display = 'flex';
+
+    // Notify Python (triggers rerun to sync completed_missions)
+    setVal({
+      type:           'QUIZ_RESULT',
+      ts:             Date.now(),
+      mission_id:     quiz.id || `${this.cfg.world}_npc_${npcType}`,
+      correct,
+      coins_earned:   earned,
+      total_coins:    window.GS.coins,
+      concept:        (quiz.concept_card||{}).title || '',
+      character_name: this.cfg.character_name || '',
+      npc_type:       npcType,
+    });
+
+    // Close feedback after 2 s and handle post-quiz state
+    setTimeout(() => {
+      document.getElementById('fb-overlay').style.display = 'none';
+      this.quizOpen = false;
+      const npc     = this.activeNPC;
+      this.activeNPC     = null;
+      this.activeNPCType = null;
+      this.activeQuiz    = null;
+
+      if (correct && npc) {
+        if (npcType === 'boss') {
+          this._triggerWorldClear();
+        } else {
+          this._destroyNPC(npc);
+        }
+      } else if (!correct && npc?.active) {
+        // Resume patrol movement; chaser resumes naturally via _updateChaser()
+        if (npcType === 'patrol') {
+          npc.setVelocityX(npc.vxPatrol || 60);
+        }
+      }
+
+      if (this.player?.body) this.player.body.enable = true;
+
+      // Show concept card hint after quiz
+      this._showConceptCard(quiz);
+    }, 2000);
+  }
+
+  // ── Concept card (world-themed, slides up after NPC defeat) ────
+  _showConceptCard(quiz) {
+    const cc    = quiz?.concept_card || {};
+    const emoji = cc.emoji || '💡';
+    const title = cc.title || '오늘의 금융 개념';
+    const body  = cc.body  || '금융 지식이 쌓이고 있어요!';
+
+    const el   = document.getElementById('concept-card');
+    const t    = this.th;
+    const acc  = t.accent || '#6366f1';
+
+    // World-themed styling
+    el.style.background   = `${acc}18`;
+    el.style.borderLeft   = `4px solid ${acc}`;
+    el.style.borderColor  = `${acc}60`;
+
+    el.innerHTML = `<b style="color:${acc};">${emoji} ${title}</b><br>
+      <span style="font-size:12px;opacity:0.9;">${body}</span>`;
+
+    el.classList.add('show');
+    clearTimeout(this._cardTimer);
+    this._cardTimer = setTimeout(() => el.classList.remove('show'), 4200);
+  }
+
+  // ════════════════════════════════════════════════════
+  //  BATTLE SEQUENCE  (encounter → villain → solsol → quiz → correct/wrong → reward)
+  // ════════════════════════════════════════════════════
+
+  _showBattlePanel(html) {
+    const ov = document.getElementById('battle-ov');
+    const content = document.getElementById('battle-content');
+    if (!ov || !content) return;
+    content.innerHTML = html;
+    ov.style.display = 'flex';
+    // Re-trigger panel animation
+    const panel = document.getElementById('battle-panel');
+    if (panel) { panel.style.animation='none'; void panel.offsetWidth; panel.style.animation='slideUp .35s cubic-bezier(.34,1.56,.64,1)'; }
+  }
+
+  _hideBattlePanel() {
+    const ov = document.getElementById('battle-ov');
+    if (ov) ov.style.display = 'none';
+    window._bNext = null;
+  }
+
+  _battlePhaseEncounter() {
+    const world = this.cfg.world || 'space';
+    const wd    = BATTLE_DIALOGUES[world] || BATTLE_DIALOGUES.space;
+    const name  = this.cfg.character_name || '여행자';
+    const lines = BATTLE_DIALOGUES.common.encounter
+      .map(t => t.replace('{villainName}', wd.villainName).replace('{nickname}', name));
+
+    this._showBattlePanel(`
+      <div class="chat-row">
+        <div class="chat-col-av">
+          <div class="chat-av">😮</div>
+          <span class="chat-av-name">쏠쏠이</span>
+        </div>
+        <div class="chat-bubble solsol">${lines.map(l=>`<p>${l}</p>`).join('')}</div>
+      </div>
+      <button class="bc-btn" onclick="window._bNext?.()">악당과 맞서겠어! →</button>
+    `);
+    window._bNext = () => this._battlePhaseVillain();
+  }
+
+  _battlePhaseVillain() {
+    const world = this.cfg.world || 'space';
+    const wd    = BATTLE_DIALOGUES[world] || BATTLE_DIALOGUES.space;
+    const npcEnemyName = this.th.enemies?.[this.activeNPCType] || wd.villainName;
+
+    this._showBattlePanel(`
+      <div class="chat-row right">
+        <div class="chat-col-av">
+          <div class="chat-av">${wd.villainEmoji}</div>
+          <span class="chat-av-name">${npcEnemyName}</span>
+        </div>
+        <div class="chat-bubble villain">${wd.villainIntro.map(l=>`<p>${l}</p>`).join('')}</div>
+      </div>
+      <button class="bc-btn danger" onclick="window._bNext?.()">지지 않을 거야! 💪</button>
+    `);
+    window._bNext = () => this._battlePhaseSolsol();
+  }
+
+  _battlePhaseSolsol() {
+    const name  = this.cfg.character_name || '여행자';
+    const lines = BATTLE_DIALOGUES.common.solsolBeforeQuiz
+      .map(t => t.replace('{nickname}', name));
+
+    this._showBattlePanel(`
+      <div class="chat-row">
+        <div class="chat-col-av">
+          <div class="chat-av">😆</div>
+          <span class="chat-av-name">쏠쏠이</span>
+        </div>
+        <div class="chat-bubble solsol">${lines.map(l=>`<p>${l}</p>`).join('')}</div>
+      </div>
+      <button class="bc-btn" onclick="window._bNext?.()">⚔️ 퀴즈 도전하기!</button>
+    `);
+    window._bNext = () => this._battlePhaseReady();
+  }
+
+  _battlePhaseReady() {
+    const world = this.cfg.world || 'space';
+    const wd    = BATTLE_DIALOGUES[world] || BATTLE_DIALOGUES.space;
+
+    this._showBattlePanel(`
+      <div style="padding:28px 12px 16px; text-align:center;">
+        <div style="font-size:2.6rem; margin-bottom:14px;">⚔️</div>
+        <div class="bc-title-big">${wd.battleTitle}</div>
+      </div>
+    `);
+
+    setTimeout(() => {
+      this._hideBattlePanel();
+      this._showQuizDOM(this.activeQuiz);
+    }, 1600);
+  }
+
+  _battlePhaseWrong() {
+    const world = this.cfg.world || 'space';
+    const wd    = BATTLE_DIALOGUES[world] || BATTLE_DIALOGUES.space;
+    const name  = this.cfg.character_name || '여행자';
+    const d     = BATTLE_DIALOGUES.common;
+    const vMsg  = d.villainWrong[Math.floor(Math.random() * d.villainWrong.length)];
+    const hMsg  = d.wrongHint[Math.floor(Math.random() * d.wrongHint.length)]
+                    .replace('{nickname}', name);
+
+    this._showBattlePanel(`
+      <div class="chat-row right">
+        <div class="chat-col-av">
+          <div class="chat-av">${wd.villainEmoji}</div>
+          <span class="chat-av-name">${wd.villainName}</span>
+        </div>
+        <div class="chat-bubble villain"><p>${vMsg}</p></div>
+      </div>
+      <div class="bc-divider"></div>
+      <div class="chat-row">
+        <div class="chat-col-av">
+          <div class="chat-av">🤔</div>
+          <span class="chat-av-name">쏠쏠이</span>
+        </div>
+        <div class="chat-bubble solsol"><p>${hMsg}</p></div>
+      </div>
+      <button class="bc-btn" onclick="window._bNext?.()">다시 도전! 💪</button>
+    `);
+    window._bNext = () => this._hideBattlePanel();
+  }
+
+  _battlePhaseCorrect(earned) {
+    const name = this.cfg.character_name || '여행자';
+    const d    = BATTLE_DIALOGUES.common;
+    const acc  = this.th.accent || '#6366f1';
+    const msg  = d.correct[Math.floor(Math.random() * d.correct.length)]
+                   .replace('{nickname}', name);
+
+    let streakHtml = '';
+    const s = this.correctStreak;
+    if (s >= 5)      streakHtml = `<div class="bc-streak">🏆 ${d.streak5}</div>`;
+    else if (s >= 3) streakHtml = `<div class="bc-streak">🔥 ${d.streak3}</div>`;
+    else if (s >= 2) streakHtml = `<div class="bc-streak">😆 ${d.streak2}</div>`;
+
+    this._showBattlePanel(`
+      ${streakHtml}
+      <div class="chat-row">
+        <div class="chat-col-av">
+          <div class="chat-av">🌟</div>
+          <span class="chat-av-name">쏠쏠이</span>
+        </div>
+        <div class="chat-bubble gold-b">
+          <p>${msg}</p>
+          <p style="color:${acc}; font-size:14px;">✨ 쏠코인의 빛이 악당의 장난 에너지를 물리쳤어!</p>
+        </div>
+      </div>
+      <button class="bc-btn gold" onclick="window._bNext?.()">악당 최후 확인하기 👀</button>
+    `);
+    window._bNext = () => this._battlePhaseDefeat(earned);
+  }
+
+  _battlePhaseDefeat(earned) {
+    const world = this.cfg.world || 'space';
+    const wd    = BATTLE_DIALOGUES[world] || BATTLE_DIALOGUES.space;
+
+    this._showBattlePanel(`
+      <div class="chat-row right">
+        <div class="chat-col-av">
+          <div class="chat-av" style="animation:shake .5s ease; display:inline-block;">${wd.villainEmoji}</div>
+          <span class="chat-av-name" style="text-decoration:line-through;">${wd.villainName}</span>
+        </div>
+        <div class="chat-bubble villain" style="opacity:.85;">
+          ${wd.villainDefeat.map(l=>`<p>${l}</p>`).join('')}
+        </div>
+      </div>
+      <button class="bc-btn gold" onclick="window._bNext?.()">🪙 쏠코인 챙기기!</button>
+    `);
+    window._bNext = () => this._battlePhaseReward(earned);
+  }
+
+  _battlePhaseReward(earned) {
+    const world   = this.cfg.world || 'space';
+    const wd      = BATTLE_DIALOGUES[world] || BATTLE_DIALOGUES.space;
+    const npcType = this.activeNPCType || 'patrol';
+    const acc     = this.th.accent || '#6366f1';
+    const quiz    = this.activeQuiz;
+
+    if (quiz) this._showConceptCard(quiz);
+
+    this._showBattlePanel(`
+      <div class="bc-coin-pop">⭐</div>
+      <div class="bc-reward-label">${wd.rewardCoin}</div>
+      <div class="bc-reward-sub">${wd.rewardText}</div>
+      <div style="text-align:center; font-size:14px; color:${acc}; font-weight:700; margin-bottom:20px;">
+        💰 현재 쏠코인: ${window.GS.coins}개
+      </div>
+      <button class="bc-btn" onclick="window._bNext?.()">다음 모험으로! →</button>
+    `);
+
+    window._bNext = () => {
+      this._hideBattlePanel();
+      this.quizOpen      = false;
+      const npc          = this.activeNPC;
+      this.activeNPC     = null;
+      this.activeNPCType = null;
+      this.activeQuiz    = null;
+
+      if (npcType === 'boss') {
+        this._triggerWorldClear();
+      } else if (npc?.active) {
+        this._destroyNPC(npc);
+      }
+      if (this.player?.body) this.player.body.enable = true;
+    };
+  }
+
+  // ── World Clear (cinematic sequence) ─────────────────
+  _triggerWorldClear() {
+    this.bossDefeated = true;
+    window.GS.coins += 50;
+    this.refreshHUD();
+
+    // Cleanup boss visuals
+    if (this.bossAura) { this.bossAura.destroy(); this.bossAura = null; }
+    if (this.bossNPC) {
+      if (this.bossNPC.lbl) this.bossNPC.lbl.destroy();
+      this.bossNPC.destroy();
+      this.bossNPC = null;
+    }
+
+    // Freeze remaining NPCs so they can't interfere with the end sequence
+    if (this.patrolNPC?.active) {
+      this.patrolNPC.setVelocity(0, 0);
+      this.patrolNPC.body.enable = false;
+    }
+    if (this.chaserNPC?.active) {
+      this.chaserNPC.setVelocity(0, 0);
+      this.chaserNPC.body.enable = false;
+    }
+
+    // ❶ White flash (screen-space)
+    const flash = this.add.rectangle(400, 250, 800, 500, 0xffffff)
+      .setScrollFactor(0).setDepth(60).setAlpha(0);
+    this.tweens.add({
+      targets: flash, alpha: { from: 0, to: 0.88 },
+      duration: 160, yoyo: true, repeat: 2,
+      onComplete: () => flash.destroy(),
+    });
+
+    // ❷ Star particle explosions from multiple screen positions
+    if (this.starParticles) {
+      const pts = [[400,250],[150,180],[650,180],[150,340],[650,340]];
+      pts.forEach(([px,py], i) => {
+        this.time.delayedCall(i * 180, () => {
+          if (this.starParticles) this.starParticles.emitParticleAt(px, py, 24);
+        });
+      });
+    }
+
+    // ❸ "🎉 세계 클리어!" text overlay (screen-space)
+    const clearTxt = this.add.text(400, 218, '🎉 세계 클리어!', {
+      fontSize: '44px', fontStyle: 'bold',
+      color:  '#ffd700',
+      stroke: '#000000', strokeThickness: 7,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(64).setAlpha(0).setScale(0.4);
+
+    this.tweens.add({
+      targets: clearTxt,
+      alpha: 1, scaleX: 1, scaleY: 1,
+      duration: 420, ease: 'Back.easeOut',
+    });
+
+    // ❹ After 2 s: fade text, then show world-clear DOM overlay
+    const elapsed = Math.floor((Date.now() - this.startTs) / 1000);
+    this.time.delayedCall(2000, () => {
+      this.tweens.add({
+        targets: clearTxt, alpha: 0, duration: 300,
+        onComplete: () => { if (clearTxt.active) clearTxt.destroy(); },
+      });
+      this._showWorldClearDOM(elapsed);
+    });
+  }
+
+  _showWorldClearDOM(elapsed) {
+    const t        = this.th;
+    const bossName = t.enemies?.boss || '보스';
+    document.getElementById('wc-title').textContent = `${t.name} 클리어!`;
+    document.getElementById('wc-sub').textContent   = `${bossName}을(를) 물리쳤어요!`;
+    document.getElementById('wc-coins').textContent =
+      `💰 ${window.GS.coins} 코인  (+50 클리어 보너스)`;
+    document.getElementById('wc-overlay').style.display = 'flex';
+
+    document.getElementById('wc-btn').onclick = () => {
+      document.getElementById('wc-overlay').style.display = 'none';
+      if (this.cfg.world === 'space') {
+        this._showSpaceEndScreen(elapsed);
+      } else {
+        this._playVideo('video/shinhan.mp4', elapsed);
+      }
+    };
+  }
+
+  // ── Space world end screen: 동요 or 뉴스 choice ──────────────
+  _showSpaceEndScreen(elapsed) {
+    const overlay  = document.getElementById('vid-overlay');
+    const player   = document.getElementById('vid-player');
+    const spaceMsg = document.getElementById('vid-space-msg');
+    const btnDonyo = document.getElementById('btn-donyo');
+    const btnNews  = document.getElementById('btn-news');
+    const btnRpt   = document.getElementById('btn-report');
+
+    // Hide video, show congratulation message + choice buttons
+    player.src             = '';
+    player.style.display   = 'none';
+    spaceMsg.style.display = 'block';
+    btnDonyo.style.display = 'block';
+    btnNews.style.display  = 'block';
+    btnRpt.style.display   = 'none';
+    overlay.style.display  = 'flex';
+
+    player.onended   = null;
+    btnDonyo.onclick = null;
+    btnNews.onclick  = null;
+    btnRpt.onclick   = null;
+
+    btnDonyo.onclick = () => {
+      btnDonyo.style.display  = 'none';
+      btnNews.style.display   = 'none';
+      spaceMsg.style.display  = 'none';
+      player.style.display    = 'block';
+      fetch('music/shinhan.mp4', { cache: 'no-store' })
+        .then(r => r.blob())
+        .then(blob => {
+          const blobUrl = URL.createObjectURL(blob);
+          if (player.src && player.src.startsWith('blob:')) URL.revokeObjectURL(player.src);
+          player.src = blobUrl;
+          player.play().catch(() => {});
+          player.onended = () => {
+            URL.revokeObjectURL(blobUrl);
+            btnNews.style.display = 'block';
+            btnNews.onclick = () => {
+              overlay.style.display = 'none';
+              setVal({ type: 'NEWS_REQUEST', ts: Date.now(), world: this.cfg.world,
+                       final_coins: window.GS.coins });
+            };
+          };
+        });
+    };
+
+    btnNews.onclick = () => {
+      overlay.style.display = 'none';
+      setVal({ type: 'NEWS_REQUEST', ts: Date.now(), world: this.cfg.world,
+               final_coins: window.GS.coins });
+    };
+  }
+
+  // ── Video playback flow (non-space worlds) ────────────────────
+  _playVideo(src, elapsed) {
+    const overlay  = document.getElementById('vid-overlay');
+    const player   = document.getElementById('vid-player');
+    const btnDonyo = document.getElementById('btn-donyo');
+    const btnRpt   = document.getElementById('btn-report');
+
+    player.style.display   = 'block';
+    btnDonyo.style.display = 'none';
+    btnRpt.style.display   = 'none';
+    player.src             = src;
+    overlay.style.display  = 'flex';
+    player.play().catch(() => {});
+
+    player.onended   = null;
+    btnDonyo.onclick = null;
+    btnRpt.onclick   = null;
+
+    if (src.includes('video/')) {
+      player.onended = () => { btnDonyo.style.display = 'block'; };
+      btnDonyo.onclick = () => {
+        btnDonyo.style.display = 'none';
+        fetch('music/shinhan.mp4', { cache: 'no-store' })
+          .then(r => r.blob())
+          .then(blob => {
+            const blobUrl = URL.createObjectURL(blob);
+            if (player.src && player.src.startsWith('blob:')) URL.revokeObjectURL(player.src);
+            player.src = blobUrl;
+            player.play().catch(() => {});
+            player.onended = () => {
+              URL.revokeObjectURL(blobUrl);
+              btnRpt.style.display = 'block';
+            };
+            btnRpt.onclick = () => {
+              overlay.style.display = 'none';
+              setVal({ type: 'WORLD_CLEAR', ts: Date.now(), world: this.cfg.world,
+                       final_coins: window.GS.coins, time_sec: elapsed });
+            };
+          });
+      };
+    }
+  }
+
+  // ── NPC defeat & cleanup ──────────────────────────────
+  _destroyNPC(npc) {
+    if (!npc) return;
+    const { x, y } = npc;
+
+    // Disable physics immediately (prevent re-trigger)
+    if (npc.body) npc.body.enable = false;
+    if (npc === this.patrolNPC) this.patrolNPC = null;
+    if (npc === this.chaserNPC) this.chaserNPC = null;
+
+    // Camera shake
+    this.cameras.main.shake(300, 0.013);
+
+    // "💥" burst text
+    const boom = this.add.text(x, y, '💥', { fontSize:'38px' })
+      .setOrigin(0.5).setDepth(26);
+    this.tweens.add({
+      targets: boom,
+      scaleX: { from: 0, to: 2.4 },
+      scaleY: { from: 0, to: 2.4 },
+      alpha:  { from: 1, to: 0 },
+      duration: 620, ease: 'Power2.easeOut',
+      onComplete: () => boom.destroy(),
+    });
+
+    // Fly-up and fade the NPC sprite
+    if (npc.active) {
+      this.tweens.add({
+        targets: npc,
+        y: y - 85, alpha: 0, scaleX: 1.7, scaleY: 1.7,
+        duration: 480, ease: 'Power2',
+        onComplete: () => { if (npc.active) npc.destroy(); },
+      });
+    }
+    if (npc.lbl) {
+      this.tweens.add({
+        targets: npc.lbl,
+        y: npc.lbl.y - 60, alpha: 0,
+        duration: 400, ease: 'Power2',
+        onComplete: () => npc.lbl.destroy(),
+      });
+    }
+
+    // Particle burst at defeat point
+    if (this.coinParticles) this.coinParticles.emitParticleAt(x, y, 16);
+  }
+
+  // ── End game (ESC) ────────────────────────────────────
+  _endGame() {
+    const elapsed = Math.floor((Date.now() - this.startTs) / 1000);
+    setVal({
+      type:               'GAME_OVER',
+      ts:                 Date.now(),
+      final_coins:        window.GS.coins,
+      missions_completed: [...window.GS.done],
+      total_time_sec:     elapsed,
+    });
+  }
+
+  // ── Chaser AI ─────────────────────────────────────────
+  _updateChaser() {
+    const npc = this.chaserNPC;
+    if (!npc?.active) return;
+
+    const dist = Phaser.Math.Distance.Between(npc.x, npc.y, this.player.x, this.player.y);
+
+    if (dist < 200) {
+      npc.isChasing = true;
+      this.physics.moveToObject(npc, this.player, 100);
+      npc.flipX = this.player.x < npc.x;
+    } else if (npc.isChasing && dist > 300) {
+      npc.isChasing = false;
+      this.physics.moveTo(npc, npc.homeX, npc.homeY, 80);
+    }
+
+    if (!npc.isChasing) {
+      const hd = Phaser.Math.Distance.Between(npc.x, npc.y, npc.homeX, npc.homeY);
+      if (hd < 8) npc.setVelocity(0, 0);
+    }
+  }
+
+  // ── Boss AI (aura + proximity trigger) ────────────────
+  _updateBoss() {
+    const npc = this.bossNPC;
+    if (!npc) return;
+
+    // Pulsing aura effect
+    if (this.bossAura) {
+      const ms    = this.time.now;
+      const scale = 1 + Math.sin(ms / 260) * 0.20;
+      const alpha = 0.20 + Math.sin(ms / 190) * 0.12;
+      this.bossAura.clear();
+      this.bossAura.fillStyle(0xff2200, alpha);
+      this.bossAura.fillCircle(npc.x, npc.y, 58 * scale);
+      this.bossAura.fillStyle(0xff8800, alpha * 0.55);
+      this.bossAura.fillCircle(npc.x, npc.y, 38 * scale);
+    }
+
+    // Proximity trigger (distance < 72 px → quiz)
+    if (!this.quizOpen) {
+      const dist = Phaser.Math.Distance.Between(npc.x, npc.y, this.player.x, this.player.y);
+      if (dist < 72) this._triggerQuiz(npc);
+    }
+  }
+
+  // ── Main loop ─────────────────────────────────────────
+  update() {
+    if (!this.player?.body?.enable || this.quizOpen) return;
+
+    // Player movement
+    const dp=this.dp, cur=this.cursors, ws=this.wasd, SPD=160;
+    let vx=0, vy=0;
+    if (cur.left.isDown  || ws.left.isDown  || dp.left)  { vx=-SPD; this.player.setFlipX(true);  }
+    if (cur.right.isDown || ws.right.isDown || dp.right)  { vx= SPD; this.player.setFlipX(false); }
+    if (cur.up.isDown    || ws.up.isDown    || dp.up)     vy=-SPD;
+    if (cur.down.isDown  || ws.down.isDown  || dp.down)   vy= SPD;
+    if (vx && vy) { vx*=0.707; vy*=0.707; }
+    this.player.setVelocity(vx, vy);
+
+    // Patrol NPC: reverse direction at bounds
+    if (this.patrolNPC?.active && !this.bossDefeated) {
+      const p = this.patrolNPC;
+      if (p.x <= p.patrolMin) { p.setVelocityX(60);  p.vxPatrol= 60;  p.flipX=false; }
+      else if (p.x >= p.patrolMax) { p.setVelocityX(-60); p.vxPatrol=-60; p.flipX=true; }
+      if (p.lbl) p.lbl.setPosition(p.x, p.y - 28);
+    }
+
+    // Chaser NPC: pursue / return home
+    if (this.chaserNPC?.active && !this.bossDefeated) {
+      this._updateChaser();
+      if (this.chaserNPC.lbl) this.chaserNPC.lbl.setPosition(this.chaserNPC.x, this.chaserNPC.y - 28);
+    }
+
+    // Boss NPC: aura + proximity
+    if (this.bossNPC && !this.bossDefeated) {
+      this._updateBoss();
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  START PHASER
+// ═══════════════════════════════════════════════════════
+function startPhaser() {
+  const worldId = window.GCFG?.world || 'dinosaur';
+  const theme   = THEMES[worldId] || THEMES.dinosaur;
+
+  _game = new Phaser.Game({
+    type:   Phaser.CANVAS,
+    width:  800,
+    height: 500,
+    backgroundColor: theme.bg,
+    parent: 'game',
+    physics: {
+      default: 'arcade',
+      arcade:  { gravity: { x:0, y:0 }, debug: false },
+    },
+    scene:  [GameScene],
+    audio:  { disableWebAudio: true },
+    banner: false,
+  });
+}
+</script>
+</body>
+</html>

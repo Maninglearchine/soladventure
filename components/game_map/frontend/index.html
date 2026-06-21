@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background:#111;
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
+  overflow:hidden;
+  font-family:'Segoe UI Emoji','Apple Color Emoji',sans-serif;
+}
+#wrap {
+  position:relative;
+  border-radius:14px;
+  overflow:hidden;
+  box-shadow:0 8px 40px rgba(0,0,0,.7);
+  margin:4px auto;
+}
+canvas { display:block; }
+
+/* ── Zone prompt ── */
+#prompt {
+  position:absolute;
+  bottom:72px;
+  left:50%;
+  transform:translateX(-50%) scale(0);
+  background:rgba(10,10,30,.92);
+  border:2px solid rgba(255,255,255,.25);
+  border-radius:16px;
+  padding:12px 26px 14px;
+  text-align:center;
+  color:#fff;
+  pointer-events:none;
+  transition:transform .18s cubic-bezier(.34,1.56,.64,1);
+  white-space:nowrap;
+  min-width:180px;
+  backdrop-filter:blur(6px);
+}
+#prompt.show { transform:translateX(-50%) scale(1); pointer-events:all; }
+#pIcon { font-size:2rem; line-height:1; }
+#pName { font-size:.92rem; font-weight:700; margin:4px 0 10px; letter-spacing:.3px; }
+#pBtn {
+  background:linear-gradient(135deg,#22c55e,#16a34a);
+  color:#fff; border:none; border-radius:10px;
+  padding:9px 22px; font-size:.95rem; font-weight:700;
+  cursor:pointer; transition:transform .1s;
+}
+#pBtn:hover  { transform:scale(1.06); }
+#pBtn:active { transform:scale(.97); }
+#pBtn.done   { background:linear-gradient(135deg,#6b7280,#4b5563); }
+
+/* ── D-pad ── */
+#dpad {
+  position:absolute;
+  bottom:6px; left:8px;
+  display:grid;
+  grid-template:repeat(3,38px)/repeat(3,38px);
+  gap:3px;
+}
+#dpad button {
+  background:rgba(255,255,255,.13);
+  border:1px solid rgba(255,255,255,.22);
+  border-radius:9px; color:#fff;
+  font-size:1rem; cursor:pointer;
+  transition:background .1s;
+  -webkit-tap-highlight-color:transparent;
+}
+#dpad button:active { background:rgba(255,255,255,.38); }
+#dpad .gap { background:transparent; border:none; }
+
+/* ── Hint ── */
+#hint {
+  position:absolute; bottom:8px; right:8px;
+  font-size:.65rem; color:rgba(255,255,255,.42);
+  text-align:right; line-height:1.7; pointer-events:none;
+}
+
+/* ── Mini HUD (coin + level) ── */
+#hud {
+  position:absolute; top:8px; left:8px;
+  background:rgba(0,0,0,.55); border-radius:8px;
+  padding:4px 10px; font-size:.78rem; color:#fff;
+  pointer-events:none; letter-spacing:.2px;
+}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+
+  <div id="hud" id="hud">🗺️ 탐험 중</div>
+
+  <!-- Zone entry prompt -->
+  <div id="prompt">
+    <div id="pIcon">🏔️</div>
+    <div id="pName">저축 동굴</div>
+    <button id="pBtn" onclick="enterZone()">🎯 탐험하기!</button>
+  </div>
+
+  <!-- D-pad for touch/mouse -->
+  <div id="dpad">
+    <div class="gap"></div>
+    <button id="db-up"    onpointerdown="dp('u',1)" onpointerup="dp('u',0)">↑</button>
+    <div class="gap"></div>
+    <button id="db-left"  onpointerdown="dp('l',1)" onpointerup="dp('l',0)">←</button>
+    <div class="gap"></div>
+    <button id="db-right" onpointerdown="dp('r',1)" onpointerup="dp('r',0)">→</button>
+    <div class="gap"></div>
+    <button id="db-down"  onpointerdown="dp('d',1)" onpointerup="dp('d',0)">↓</button>
+    <div class="gap"></div>
+  </div>
+
+  <div id="hint">← → ↑ ↓ / WASD<br>Enter = 탐험</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+//  STREAMLIT COMPONENT PROTOCOL
+// ═══════════════════════════════════════════
+let _initialized = false;
+
+window.parent.postMessage(
+  { isStreamlitMessage:true, type:"streamlit:componentReady", apiVersion:1 }, "*"
+);
+
+window.addEventListener("message", e => {
+  const d = e.data;
+  if (!d || d.type !== "streamlit:render") return;
+  const a = d.args || {};
+  if (!_initialized) { init(a); _initialized = true; }
+  else { updateCompleted(a.completed_zones || []); }
+});
+
+function setVal(v) {
+  window.parent.postMessage(
+    { isStreamlitMessage:true, type:"streamlit:setComponentValue", value:v }, "*"
+  );
+}
+function setHeight(h) {
+  window.parent.postMessage(
+    { isStreamlitMessage:true, type:"streamlit:setFrameHeight", height:h }, "*"
+  );
+}
+
+// ═══════════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════════
+const T     = 56;   // tile px
+const COLS  = 11;
+const ROWS  = 8;
+const CW    = T * COLS;   // 616
+const CH    = T * ROWS;   // 448
+const SPD   = T * 3.8;    // px / sec
+const ZRAD  = T * 0.95;   // zone proximity radius
+
+// Zone tile positions (fixed layout for all worlds)
+const ZONE_POS = [
+  { tx:2, ty:2 },   // zone 0 – top-left
+  { tx:5, ty:4 },   // zone 1 – center
+  { tx:8, ty:2 },   // zone 2 – top-right
+];
+
+// Collision map  0=floor  1=wall
+const TILEMAP = [
+  [1,1,1,1,1,1,1,1,1,1,1],
+  [1,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,1,0,1,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,1],
+  [1,0,1,0,0,0,0,0,1,0,1],
+  [1,0,0,0,0,0,0,0,0,0,1],
+  [1,1,1,1,1,1,1,1,1,1,1],
+];
+
+// Per-world visual themes
+const THEMES = {
+  dinosaur:{
+    bg:'#1e4020', floor:['#2e6b27','#285e22'], wall:'#122b0e',
+    wallE:'🌳', ambiE:['🌿','🍃','🌱','🌿','🍃'], charE:'🦕',
+    accent:'#22c55e', pathC:'rgba(139,111,78,.35)',
+  },
+  space:{
+    bg:'#06061a', floor:['#0e0e30','#0b0b28'], wall:'#03030f',
+    wallE:'🪨', ambiE:['⭐','✨','💫','⭐','🌠'], charE:'🧑‍🚀',
+    accent:'#6366f1', pathC:'rgba(99,102,241,.2)',
+  },
+  magic:{
+    bg:'#170840', floor:['#250d60','#200b55'], wall:'#0d0428',
+    wallE:'🧱', ambiE:['✨','⭐','🌟','🔮','✨'], charE:'🧙',
+    accent:'#f59e0b', pathC:'rgba(245,158,11,.2)',
+  },
+  ocean:{
+    bg:'#001f44', floor:['#002d66','#002558'], wall:'#000f22',
+    wallE:'🪸', ambiE:['🐠','🐟','🦑','🐙','🐡'], charE:'🤿',
+    accent:'#0ea5e9', pathC:'rgba(14,165,233,.2)',
+  },
+};
+
+// ═══════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════
+let canvas, ctx, theme, zones, done;
+let player = { px:0, py:0, vx:0, vy:0, face:'down', frame:0, ft:0, moving:false };
+let keys = {}, dpadState = { u:0, l:0, r:0, d:0 };
+let nearZone = null;
+let ambient = [];
+let t = 0, lastTs = 0;
+
+// ═══════════════════════════════════════════
+//  INPUT
+// ═══════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  keys[e.key] = true;
+  if (e.key === 'Enter' && nearZone) enterZone();
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))
+    e.preventDefault();
+});
+document.addEventListener('keyup', e => { keys[e.key] = false; });
+
+function dp(dir, v) { dpadState[dir] = v; }
+
+function held(dir) {
+  const m = {u:['ArrowUp','w','W'], d:['ArrowDown','s','S'],
+              l:['ArrowLeft','a','A'], r:['ArrowRight','d','D']};
+  return m[dir].some(k => keys[k]) || !!dpadState[dir];
+}
+
+// ═══════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════
+function init(args) {
+  canvas = document.getElementById('c');
+  ctx    = canvas.getContext('2d');
+  canvas.width  = CW;
+  canvas.height = CH;
+
+  const wrap = document.getElementById('wrap');
+  wrap.style.width  = CW + 'px';
+  wrap.style.height = CH + 'px';
+  document.body.style.background = '#111';
+
+  const wid = args.world_id || 'dinosaur';
+  theme = THEMES[wid] || THEMES.dinosaur;
+
+  // Tint zone prompt button with world accent color
+  document.getElementById('pBtn').style.background =
+    `linear-gradient(135deg,${theme.accent},${theme.accent}bb)`;
+
+  // Build zone objects
+  zones = (args.zones || []).map((z, i) => {
+    const pos = ZONE_POS[i] || { tx: 2 + i * 3, ty: 2 };
+    return {
+      id: z.id, name: z.name, emoji: z.emoji,
+      tx: pos.tx, ty: pos.ty,
+      cx: pos.tx * T + T / 2,
+      cy: pos.ty * T + T / 2,
+    };
+  });
+
+  done = new Set(args.completed_zones || []);
+
+  // Player start tile
+  const ptx = args.ptx ?? 5, pty = args.pty ?? 6;
+  player.px = ptx * T + T / 2;
+  player.py = pty * T + T / 2;
+
+  // Scatter ambient decorations (avoid wall tiles & zone tiles)
+  const zoneSet = new Set(zones.map(z => `${z.tx},${z.ty}`));
+  ambient = [];
+  for (let r = 1; r < ROWS - 1; r++) {
+    for (let c = 1; c < COLS - 1; c++) {
+      if (TILEMAP[r][c] === 1) continue;
+      if (zoneSet.has(`${c},${r}`)) continue;
+      if (Math.random() < 0.12) {
+        ambient.push({
+          x: c * T + T / 2,
+          y: r * T + T / 2,
+          e: theme.ambiE[Math.floor(Math.random() * theme.ambiE.length)],
+          ph: Math.random() * Math.PI * 2,
+        });
+      }
+    }
+  }
+
+  setHeight(CH + 10);
+  // Give the iframe focus so keyboard events fire immediately
+  canvas.setAttribute('tabindex', '0');
+  canvas.focus();
+  requestAnimationFrame(loop);
+}
+
+function updateCompleted(list) {
+  done = new Set(list);
+}
+
+// ═══════════════════════════════════════════
+//  GAME LOOP
+// ═══════════════════════════════════════════
+function loop(ts) {
+  const dt = Math.min((ts - lastTs) / 1000, 0.05);
+  lastTs = ts;
+  t += dt;
+
+  update(dt);
+  render();
+
+  requestAnimationFrame(loop);
+}
+
+// ═══════════════════════════════════════════
+//  UPDATE
+// ═══════════════════════════════════════════
+function update(dt) {
+  let dx = 0, dy = 0;
+  if (held('l')) { dx = -1; player.face = 'left';  }
+  if (held('r')) { dx =  1; player.face = 'right'; }
+  if (held('u')) { dy = -1; player.face = 'up';    }
+  if (held('d')) { dy =  1; player.face = 'down';  }
+
+  if (dx && dy) { dx *= .707; dy *= .707; }
+  player.moving = (dx !== 0 || dy !== 0);
+
+  // Walk frame animation
+  if (player.moving) {
+    player.ft += dt;
+    if (player.ft > .18) { player.ft = 0; player.frame ^= 1; }
+  } else { player.frame = 0; player.ft = 0; }
+
+  // Slide-move with AABB collision
+  const R = T * .28;
+  const nx = player.px + dx * SPD * dt;
+  const ny = player.py + dy * SPD * dt;
+  if (!wallAt(nx, player.py, R)) player.px = nx;
+  if (!wallAt(player.px, ny, R)) player.py = ny;
+  player.px = Math.max(T + R, Math.min(CW - T - R, player.px));
+  player.py = Math.max(T + R, Math.min(CH - T - R, player.py));
+
+  // Zone proximity
+  nearZone = null;
+  for (const z of zones) {
+    if (Math.hypot(player.px - z.cx, player.py - z.cy) < ZRAD) {
+      nearZone = z; break;
+    }
+  }
+
+  // Update prompt DOM
+  const p = document.getElementById('prompt');
+  if (nearZone) {
+    document.getElementById('pIcon').textContent = nearZone.emoji;
+    document.getElementById('pName').textContent = nearZone.name;
+    const btn = document.getElementById('pBtn');
+    if (done.has(nearZone.id)) {
+      btn.textContent = '✅ 다시 도전!';
+      btn.className = 'done';
+    } else {
+      btn.textContent = '🎯 탐험하기!';
+      btn.className = '';
+    }
+    p.classList.add('show');
+  } else {
+    p.classList.remove('show');
+  }
+}
+
+function wallAt(px, py, r) {
+  const pts = [[px-r,py-r],[px+r,py-r],[px-r,py+r],[px+r,py+r]];
+  for (const [cx, cy] of pts) {
+    const tc = Math.floor(cx / T), tr = Math.floor(cy / T);
+    if (tr < 0 || tr >= ROWS || tc < 0 || tc >= COLS) return true;
+    if (TILEMAP[tr][tc] === 1) return true;
+  }
+  return false;
+}
+
+// ═══════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════
+function render() {
+  ctx.clearRect(0, 0, CW, CH);
+
+  // ── Floor & walls ──────────────────────────────
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const x = c * T, y = r * T;
+      if (TILEMAP[r][c] === 1) {
+        ctx.fillStyle = theme.wall;
+        ctx.fillRect(x, y, T, T);
+        // Decorative wall emoji (not on border corners)
+        if (r > 0 && r < ROWS-1) {
+          ctx.font = `${T*.52}px serif`;
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText(theme.wallE, x + T/2, y + T/2);
+        }
+      } else {
+        ctx.fillStyle = (r + c) % 2 === 0 ? theme.floor[0] : theme.floor[1];
+        ctx.fillRect(x, y, T, T);
+      }
+    }
+  }
+
+  // ── Path hints between zones ───────────────────
+  ctx.fillStyle = theme.pathC;
+  // horizontal path row 2
+  for (let c = ZONE_POS[0].tx; c <= ZONE_POS[2].tx; c++) {
+    if (TILEMAP[2][c] === 0) ctx.fillRect(c*T, 2*T, T, T);
+  }
+  // vertical spine col 5
+  for (let r = 2; r <= 6; r++) {
+    if (TILEMAP[r][5] === 0) ctx.fillRect(5*T, r*T, T, T);
+  }
+
+  // ── Ambient decorations ────────────────────────
+  for (const a of ambient) {
+    const bob = Math.sin(t * 1.4 + a.ph) * 2.5;
+    ctx.globalAlpha = .35;
+    ctx.font = `${T*.32}px serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(a.e, a.x, a.y + bob);
+  }
+  ctx.globalAlpha = 1;
+
+  // ── Zones ──────────────────────────────────────
+  for (const z of zones) drawZone(z);
+
+  // ── Player ─────────────────────────────────────
+  drawPlayer();
+}
+
+// ── Zone rendering ──────────────────────────────
+function drawZone(z) {
+  const x = z.tx * T, y = z.ty * T;
+  const cx = x + T/2, cy = y + T/2;
+  const isNear  = nearZone?.id === z.id;
+  const isDone  = done.has(z.id);
+  const pulse   = Math.sin(t * 2.2) * .12 + .88;
+
+  // Outer glow
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, T * 1.1);
+  if (isDone) {
+    g.addColorStop(0,'rgba(34,197,94,.45)');
+    g.addColorStop(1,'rgba(34,197,94,0)');
+  } else if (isNear) {
+    g.addColorStop(0,'rgba(255,220,50,.55)');
+    g.addColorStop(1,'rgba(255,220,50,0)');
+  } else {
+    g.addColorStop(0,'rgba(255,255,255,.18)');
+    g.addColorStop(1,'rgba(255,255,255,0)');
+  }
+  ctx.fillStyle = g;
+  ctx.fillRect(x - T*.35, y - T*.35, T*1.7, T*1.7);
+
+  // Platform tile
+  ctx.fillStyle = isDone
+    ? 'rgba(34,197,94,.28)'
+    : isNear ? 'rgba(255,220,50,.22)' : 'rgba(255,255,255,.12)';
+  rr(ctx, x+5, y+5, T-10, T-10, 10); ctx.fill();
+
+  // Highlight border when near
+  if (isNear) {
+    ctx.strokeStyle = 'rgba(255,220,50,.9)';
+    ctx.lineWidth = 2.5;
+    rr(ctx, x+3, y+3, T-6, T-6, 10); ctx.stroke();
+  }
+
+  // Zone emoji (pulsing when near)
+  const sz = isNear ? T*.65*pulse : T*.6;
+  const bob = Math.sin(t * 1.9) * (isNear ? 3.5 : 1.5);
+  ctx.font = `${sz}px serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(z.emoji, cx, cy + bob);
+
+  // ✅ completion badge
+  if (isDone) {
+    ctx.font = `${T*.28}px serif`;
+    ctx.fillText('✅', x + T - 10, y + 8);
+  }
+
+  // Zone name plate
+  ctx.font = `bold ${T*.165}px 'Segoe UI',sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  const tw = ctx.measureText(z.name).width + 10;
+  ctx.fillStyle = 'rgba(0,0,0,.65)';
+  rr(ctx, cx - tw/2, y+T+1, tw, T*.21, 4); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.fillText(z.name, cx, y + T + 3);
+}
+
+// ── Player rendering ────────────────────────────
+function drawPlayer() {
+  const { px, py, moving, face } = player;
+
+  // Ground shadow
+  ctx.fillStyle = 'rgba(0,0,0,.22)';
+  ctx.beginPath();
+  ctx.ellipse(px, py + T*.31, T*.2, T*.07, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Bob & lean
+  const bob  = moving ? Math.sin(t*10)*3 : Math.sin(t*1.5)*1.5;
+  const lean = moving ? (face==='left'?-.08 : face==='right'?.08 : 0) : 0;
+
+  ctx.save();
+  ctx.translate(px, py + bob);
+  ctx.rotate(lean);
+  ctx.font = `${T*.74}px serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(theme.charE, 0, 0);
+  ctx.restore();
+
+  // Proximity ring
+  if (nearZone) {
+    ctx.strokeStyle = `rgba(255,220,50,${.5 + Math.sin(t*4)*.3})`;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5,5]);
+    ctx.beginPath();
+    ctx.arc(px, py, T*.42, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+// ── Util: rounded rect path ─────────────────────
+function rr(c, x, y, w, h, r) {
+  c.beginPath();
+  c.moveTo(x+r,y); c.lineTo(x+w-r,y);
+  c.quadraticCurveTo(x+w,y,x+w,y+r);
+  c.lineTo(x+w,y+h-r);
+  c.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  c.lineTo(x+r,y+h);
+  c.quadraticCurveTo(x,y+h,x,y+h-r);
+  c.lineTo(x,y+r);
+  c.quadraticCurveTo(x,y,x+r,y);
+  c.closePath();
+}
+
+// ═══════════════════════════════════════════
+//  ZONE ENTRY
+// ═══════════════════════════════════════════
+function enterZone() {
+  if (!nearZone) return;
+  setVal({
+    action:  'enter_zone',
+    zone_id: nearZone.id,
+    ptx:     nearZone.tx,
+    pty:     Math.min(nearZone.ty + 1, ROWS - 2),
+  });
+}
+</script>
+</body>
+</html>

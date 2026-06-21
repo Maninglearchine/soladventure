@@ -1,0 +1,164 @@
+{
+  "worlds": [
+    {
+      "id": "dinosaur",
+      "name": "공룡 정글",
+      "emoji": "🦕",
+      "color": "#22c55e",
+      "concept": "저축·목표 설정",
+      "description": "공룡들과 함께 저축과 목표 설정을 배워요!",
+      "zones": [
+        {
+          "id": "savings_cave",
+          "name": "저축 동굴",
+          "emoji": "🏔️",
+          "description": "공룡들이 먹이를 모아두는 비밀 동굴",
+          "concept": "저축",
+          "concept_desc": "지금 쓰지 않고 나중을 위해 모아두는 것",
+          "x": 0, "y": 0,
+          "locked": false
+        },
+        {
+          "id": "goal_tree",
+          "name": "목표 나무",
+          "emoji": "🌳",
+          "description": "공룡들이 꿈을 새겨놓은 거대한 나무",
+          "concept": "목표 설정",
+          "concept_desc": "원하는 것을 이루기 위해 계획을 세우는 것",
+          "x": 1, "y": 0,
+          "locked": false
+        },
+        {
+          "id": "trade_market",
+          "name": "물물교환 시장",
+          "emoji": "🦖",
+          "description": "공룡들이 서로 물건을 바꾸는 시장",
+          "concept": "교환·거래",
+          "concept_desc": "서로에게 필요한 것을 바꾸는 것",
+          "x": 2, "y": 0,
+          "locked": false
+        }
+      ]
+    },
+    {
+      "id": "space",
+      "name": "우주 탐험",
+      "emoji": "🚀",
+      "color": "#6366f1",
+      "concept": "투자·리스크",
+      "description": "우주를 탐험하며 투자와 위험을 배워요!",
+      "zones": [
+        {
+          "id": "invest_planet",
+          "name": "투자 행성",
+          "emoji": "🪐",
+          "description": "수익이 자라나는 신비한 행성",
+          "concept": "투자",
+          "concept_desc": "돈을 불리기 위해 어딘가에 맡기는 것",
+          "x": 0, "y": 0,
+          "locked": false
+        },
+        {
+          "id": "risk_asteroid",
+          "name": "위험 소행성",
+          "emoji": "☄️",
+          "description": "예측할 수 없는 위험한 소행성 지대",
+          "concept": "리스크",
+          "concept_desc": "투자에는 항상 잃을 수 있는 위험이 있어요",
+          "x": 1, "y": 0,
+          "locked": false
+        },
+        {
+          "id": "diversify_galaxy",
+          "name": "분산 은하",
+          "emoji": "🌌",
+          "description": "여러 별에 씨앗을 뿌리는 지혜로운 은하",
+          "concept": "분산 투자",
+          "concept_desc": "한 곳에만 투자하지 않고 여러 곳에 나눠서 위험을 줄이는 것",
+          "x": 2, "y": 0,
+          "locked": false
+        }
+      ]
+    },
+    {
+      "id": "magic",
+      "name": "마법 왕국",
+      "emoji": "🧙",
+      "color": "#f59e0b",
+      "concept": "용돈·소비 판단",
+      "description": "마법사와 함께 똑똑한 소비를 배워요!",
+      "zones": [
+        {
+          "id": "budget_castle",
+          "name": "예산 성",
+          "emoji": "🏰",
+          "description": "마법사가 금화를 계획적으로 쓰는 성",
+          "concept": "예산",
+          "concept_desc": "쓸 돈을 미리 계획하고 나누는 것",
+          "x": 0, "y": 0,
+          "locked": false
+        },
+        {
+          "id": "needs_market",
+          "name": "필요 vs 욕구 시장",
+          "emoji": "🛒",
+          "description": "필요한 것과 갖고 싶은 것을 파는 시장",
+          "concept": "필요 vs 욕구",
+          "concept_desc": "꼭 필요한 것(needs)과 갖고 싶은 것(wants)을 구별하는 것",
+          "x": 1, "y": 0,
+          "locked": false
+        },
+        {
+          "id": "impulse_cave",
+          "name": "충동 구매 동굴",
+          "emoji": "😈",
+          "description": "생각 없이 사고 싶어지는 마법 동굴",
+          "concept": "충동 구매",
+          "concept_desc": "계획 없이 순간의 욕구로 물건을 사는 것",
+          "x": 2, "y": 0,
+          "locked": false
+        }
+      ]
+    },
+    {
+      "id": "ocean",
+      "name": "해저 왕국",
+      "emoji": "🐠",
+      "color": "#0ea5e9",
+      "concept": "이자·복리",
+      "description": "바다 속에서 이자와 복리의 마법을 배워요!",
+      "zones": [
+        {
+          "id": "interest_reef",
+          "name": "이자 산호초",
+          "emoji": "🪸",
+          "description": "시간이 지날수록 자라나는 산호초",
+          "concept": "이자",
+          "concept_desc": "돈을 빌려주거나 맡길 때 받는 추가 돈",
+          "x": 0, "y": 0,
+          "locked": false
+        },
+        {
+          "id": "compound_trench",
+          "name": "복리 해구",
+          "emoji": "🌀",
+          "description": "이자가 이자를 낳는 신비한 깊은 바다",
+          "concept": "복리",
+          "concept_desc": "이자에 또 이자가 붙어서 돈이 눈덩이처럼 커지는 것",
+          "x": 1, "y": 0,
+          "locked": false
+        },
+        {
+          "id": "longterm_palace",
+          "name": "장기 저축 궁전",
+          "emoji": "🏯",
+          "description": "오래 기다린 자에게 보물을 주는 궁전",
+          "concept": "장기 저축",
+          "concept_desc": "오랫동안 꾸준히 저축하면 훨씬 많은 돈이 쌓여요",
+          "x": 2, "y": 0,
+          "locked": false
+        }
+      ]
+    }
+  ]
+}

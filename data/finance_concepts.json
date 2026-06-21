@@ -1,0 +1,100 @@
+{
+  "concepts": [
+    {
+      "id": "saving",
+      "title": "저축",
+      "world": "dinosaur",
+      "zones": ["savings_cave", "goal_tree"],
+      "difficulty": 1,
+      "tags": ["기본", "습관"]
+    },
+    {
+      "id": "goal_saving",
+      "title": "목표 저축",
+      "world": "dinosaur",
+      "zones": ["goal_tree"],
+      "difficulty": 2,
+      "tags": ["계획", "습관"]
+    },
+    {
+      "id": "trade",
+      "title": "교환·거래",
+      "world": "dinosaur",
+      "zones": ["trade_market"],
+      "difficulty": 1,
+      "tags": ["기본", "시장"]
+    },
+    {
+      "id": "investment",
+      "title": "투자",
+      "world": "space",
+      "zones": ["invest_planet"],
+      "difficulty": 2,
+      "tags": ["중급", "수익"]
+    },
+    {
+      "id": "risk",
+      "title": "리스크",
+      "world": "space",
+      "zones": ["risk_asteroid"],
+      "difficulty": 2,
+      "tags": ["중급", "위험관리"]
+    },
+    {
+      "id": "diversification",
+      "title": "분산 투자",
+      "world": "space",
+      "zones": ["diversify_galaxy"],
+      "difficulty": 3,
+      "tags": ["심화", "포트폴리오"]
+    },
+    {
+      "id": "allowance",
+      "title": "용돈 관리",
+      "world": "magic",
+      "zones": ["budget_castle"],
+      "difficulty": 1,
+      "tags": ["기본", "예산"]
+    },
+    {
+      "id": "needs_wants",
+      "title": "필요 vs 욕구",
+      "world": "magic",
+      "zones": ["needs_market"],
+      "difficulty": 1,
+      "tags": ["기본", "소비"]
+    },
+    {
+      "id": "impulse_buying",
+      "title": "충동 구매",
+      "world": "magic",
+      "zones": ["impulse_cave"],
+      "difficulty": 2,
+      "tags": ["중급", "소비습관"]
+    },
+    {
+      "id": "interest",
+      "title": "이자",
+      "world": "ocean",
+      "zones": ["interest_reef"],
+      "difficulty": 2,
+      "tags": ["중급", "은행"]
+    },
+    {
+      "id": "compound_interest",
+      "title": "복리",
+      "world": "ocean",
+      "zones": ["compound_trench"],
+      "difficulty": 3,
+      "tags": ["심화", "장기투자"]
+    },
+    {
+      "id": "long_term_saving",
+      "title": "장기 저축",
+      "world": "ocean",
+      "zones": ["longterm_palace"],
+      "difficulty": 3,
+      "tags": ["심화", "미래계획"]
+    }
+  ]
+}
