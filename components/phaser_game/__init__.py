@@ -6,7 +6,8 @@ _phaser_game = components.declare_component("finquest_phaser_game", path=_FRONTE
 
 
 def render_phaser_game(world, character_name, age_group, coins, level,
-                       completed_missions, missions, quizzes=None, key=None):
+                       completed_missions, missions, quizzes=None, key=None,
+                       battle_test=False):
     """
     Renders the Phaser 3 game.
     Returns a dict on QUIZ_RESULT, WORLD_CLEAR, or GAME_OVER events; None otherwise.
@@ -20,6 +21,7 @@ def render_phaser_game(world, character_name, age_group, coins, level,
         completed_missions=list(completed_missions),
         missions=missions,
         quizzes=quizzes or [],
+        battle_test=bool(battle_test),
         key=key,
         default=None,
         height=540,

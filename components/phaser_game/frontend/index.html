@@ -17,10 +17,10 @@ body { background: #111; overflow: hidden; font-family: 'Segoe UI Emoji', 'Apple
 /* ── Quiz overlay ─────────────────────────── */
 #quiz-overlay {
   display: none;
-  position: absolute;
+  position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.80);
-  z-index: 200;
+  z-index: 9500;
   justify-content: center;
   align-items: center;
 }
@@ -285,6 +285,25 @@ body { background: #111; overflow: hidden; font-family: 'Segoe UI Emoji', 'Apple
   color: #fff;
 }
 #btn-news:hover { transform: scale(1.05); box-shadow: 0 6px 20px rgba(99,102,241,.5); }
+#btn-stage2 {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+  order: -1;
+}
+#btn-stage2:hover { transform: scale(1.05); box-shadow: 0 6px 20px rgba(239,68,68,.5); }
+
+/* ── Battle result overlay ───────────────── */
+#battle-result-overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.78);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  z-index: 10;
+}
 
 /* ── Concept card ─────────────────────────── */
 #concept-card {
@@ -339,6 +358,14 @@ body { background: #111; overflow: hidden; font-family: 'Segoe UI Emoji', 'Apple
 <div id="game-wrap">
   <div id="game"></div>
 
+  <!-- ── 임시 배틀 테스트 버튼 ─────────────────── -->
+  <button id="btn-battle-test" onclick="startBattleGame(function(){})" style="
+    position:absolute; top:8px; right:8px; z-index:8000;
+    padding:8px 16px; font-size:13px; font-weight:800;
+    background:rgba(239,68,68,.85); color:white; border:none;
+    border-radius:8px; cursor:pointer; backdrop-filter:blur(8px);
+  ">⚔️ 배틀 테스트</button>
+
   <!-- ── Quiz overlay ───────────────────────── -->
   <div id="quiz-overlay">
     <div id="quiz-panel">
@@ -390,9 +417,48 @@ body { background: #111; overflow: hidden; font-family: 'Segoe UI Emoji', 'Apple
     </div>
     <video id="vid-player" autoplay controls></video>
     <div id="vid-btn-row">
+      <button id="btn-stage2" class="vid-action-btn" style="display:none">⚔️ 다음 스테이지</button>
       <button id="btn-donyo" class="vid-action-btn" style="display:none">🎵 동요배우기</button>
       <button id="btn-news"  class="vid-action-btn" style="display:none">📰 주식 뉴스 보기</button>
       <button id="btn-report" class="vid-action-btn" style="display:none">📊 리포트 보기 →</button>
+    </div>
+  </div>
+
+  <!-- ── Battle Game Overlay (Stage 2) ────────── -->
+  <div id="battle-game-overlay" style="display:none; position:fixed; inset:0; background:#000; z-index:9000; flex-direction:column; align-items:center; justify-content:center;">
+
+    <!-- ── 인트로 화면 ── -->
+    <div id="battle-intro" style="display:none; position:absolute; inset:0; background:linear-gradient(135deg,#0d0221,#1a0a3a); z-index:30; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px;">
+      <div style="font-size:4rem; margin-bottom:16px; animation:floatY 2s ease-in-out infinite;">👾</div>
+      <div id="battle-intro-title" style="font-size:1.9rem; font-weight:900; color:#ffd700; margin-bottom:14px; line-height:1.3;"></div>
+      <div id="battle-intro-body" style="font-size:1.05rem; color:rgba(255,255,255,.8); max-width:480px; line-height:1.8; margin-bottom:32px;"></div>
+      <div style="font-size:.9rem; color:rgba(255,255,255,.45); margin-bottom:24px;">← → 키로 이동 &nbsp;|&nbsp; 스페이스바로 공격 &nbsp;|&nbsp; 가까이 붙어야 공격 가능!</div>
+      <button id="battle-intro-btn" style="padding:16px 48px; font-size:1.2rem; font-weight:900; background:linear-gradient(135deg,#ef4444,#dc2626); color:white; border:none; border-radius:14px; cursor:pointer; box-shadow:0 6px 24px rgba(239,68,68,.5);">
+        ⚔️ 전투 시작!
+      </button>
+    </div>
+
+    <!-- ── 상황 내레이션 ── -->
+    <div id="battle-narration" style="display:none; position:absolute; inset:0; background:rgba(0,0,0,.7); z-index:25; flex-direction:column; align-items:center; justify-content:center;">
+      <div id="battle-narration-text" style="font-size:1.5rem; font-weight:900; color:white; text-align:center; max-width:500px; line-height:1.7; padding:32px 40px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.15); border-radius:24px; backdrop-filter:blur(12px);"></div>
+    </div>
+
+    <!-- ── 결과 메세지 ── -->
+    <div id="battle-action-result" style="display:none; position:absolute; inset:0; background:rgba(0,0,0,.6); z-index:28; flex-direction:column; align-items:center; justify-content:center;">
+      <div id="battle-action-result-text" style="font-size:2.2rem; font-weight:900; text-align:center; line-height:1.5;"></div>
+    </div>
+
+    <canvas id="battle-canvas" width="800" height="500" style="max-width:100%; border-radius:12px;"></canvas>
+    <div id="battle-hud" style="display:flex; gap:40px; margin-top:12px; font-size:1.2rem; font-weight:800; color:white;">
+      <span id="battle-hp-player">❤️❤️❤️ 쏠쏠이</span>
+      <span id="battle-cooldown" style="color:#fbbf24; font-size:.95rem;"></span>
+      <span id="battle-hp-vill">빌런 ❤️❤️❤️</span>
+    </div>
+    <div id="battle-hint" style="color:rgba(255,255,255,.5); font-size:.85rem; margin-top:6px;">← → 이동 &nbsp;|&nbsp; 스페이스바 공격!</div>
+
+    <div id="battle-result-overlay" style="display:none; position:absolute; inset:0; background:rgba(0,0,0,.75); flex-direction:column; align-items:center; justify-content:center; z-index:10;">
+      <div id="battle-result-text" style="font-size:2.5rem; font-weight:900; color:#ffd700; margin-bottom:24px;"></div>
+      <div id="battle-result-btns" style="display:flex; flex-direction:column; gap:12px; min-width:220px;"></div>
     </div>
   </div>
 
@@ -434,6 +500,9 @@ window.addEventListener('message', ev => {
     applyThemeCSS(args.world || 'dinosaur');
     startPhaser();
     _initialized = true;
+    if (args.battle_test) {
+      setTimeout(() => startBattleGame(function(){}), 800);
+    }
   } else {
     // Re-render after Python rerun — update state only, do not restart Phaser
     window.GS.done = new Set(args.completed_missions || []);
@@ -1544,28 +1613,40 @@ class GameScene extends Phaser.Scene {
   _showSpaceEndScreen(elapsed) {
     const overlay  = document.getElementById('vid-overlay');
     const player   = document.getElementById('vid-player');
-    const spaceMsg = document.getElementById('vid-space-msg');
-    const btnDonyo = document.getElementById('btn-donyo');
-    const btnNews  = document.getElementById('btn-news');
-    const btnRpt   = document.getElementById('btn-report');
+    const spaceMsg  = document.getElementById('vid-space-msg');
+    const btnStage2 = document.getElementById('btn-stage2');
+    const btnDonyo  = document.getElementById('btn-donyo');
+    const btnNews   = document.getElementById('btn-news');
+    const btnRpt    = document.getElementById('btn-report');
 
     // Hide video, show congratulation message + choice buttons
     player.src             = '';
     player.style.display   = 'none';
     spaceMsg.style.display = 'block';
+    btnStage2.style.display = 'block';
     btnDonyo.style.display = 'block';
     btnNews.style.display  = 'block';
     btnRpt.style.display   = 'none';
     overlay.style.display  = 'flex';
 
-    player.onended   = null;
-    btnDonyo.onclick = null;
-    btnNews.onclick  = null;
-    btnRpt.onclick   = null;
+    player.onended    = null;
+    btnStage2.onclick = null;
+    btnDonyo.onclick  = null;
+    btnNews.onclick   = null;
+    btnRpt.onclick    = null;
+
+    btnStage2.onclick = () => {
+      overlay.style.display = 'none';
+      startBattleGame(() => {
+        // on battle complete — show same end screen again
+        this._showSpaceEndScreen(elapsed);
+      });
+    };
 
     btnDonyo.onclick = () => {
       btnDonyo.style.display  = 'none';
       btnNews.style.display   = 'none';
+      btnStage2.style.display = 'none';
       spaceMsg.style.display  = 'none';
       player.style.display    = 'block';
       fetch('music/shinhan.mp4', { cache: 'no-store' })
@@ -1596,26 +1677,41 @@ class GameScene extends Phaser.Scene {
 
   // ── Video playback flow (non-space worlds) ────────────────────
   _playVideo(src, elapsed) {
-    const overlay  = document.getElementById('vid-overlay');
-    const player   = document.getElementById('vid-player');
-    const btnDonyo = document.getElementById('btn-donyo');
-    const btnRpt   = document.getElementById('btn-report');
+    const overlay   = document.getElementById('vid-overlay');
+    const player    = document.getElementById('vid-player');
+    const btnStage2 = document.getElementById('btn-stage2');
+    const btnDonyo  = document.getElementById('btn-donyo');
+    const btnRpt    = document.getElementById('btn-report');
 
-    player.style.display   = 'block';
-    btnDonyo.style.display = 'none';
-    btnRpt.style.display   = 'none';
-    player.src             = src;
-    overlay.style.display  = 'flex';
+    player.style.display    = 'block';
+    btnStage2.style.display = 'none';
+    btnDonyo.style.display  = 'none';
+    btnRpt.style.display    = 'none';
+    player.src              = src;
+    overlay.style.display   = 'flex';
     player.play().catch(() => {});
 
-    player.onended   = null;
-    btnDonyo.onclick = null;
-    btnRpt.onclick   = null;
+    player.onended    = null;
+    btnStage2.onclick = null;
+    btnDonyo.onclick  = null;
+    btnRpt.onclick    = null;
 
     if (src.includes('video/')) {
-      player.onended = () => { btnDonyo.style.display = 'block'; };
+      player.onended = () => {
+        btnStage2.style.display = 'block';
+        btnDonyo.style.display  = 'block';
+      };
+
+      btnStage2.onclick = () => {
+        overlay.style.display = 'none';
+        startBattleGame(() => {
+          this._playVideo(src, elapsed);
+        });
+      };
+
       btnDonyo.onclick = () => {
-        btnDonyo.style.display = 'none';
+        btnStage2.style.display = 'none';
+        btnDonyo.style.display  = 'none';
         fetch('music/shinhan.mp4', { cache: 'no-store' })
           .then(r => r.blob())
           .then(blob => {
@@ -1798,6 +1894,484 @@ function startPhaser() {
     audio:  { disableWebAudio: true },
     banner: false,
   });
+}
+
+// ═══════════════════════════════════════════════════════
+//  BATTLE QUIZ BANK  (월드·나이별 퀴즈)
+// ═══════════════════════════════════════════════════════
+const _BQB = {
+  // ── 공통 기초 (저학년) ──────────────────────────────
+  common_low: [
+    { q: "저축이란 무엇일까요?", choices: ["돈을 미래를 위해 모아두는 것", "돈을 한꺼번에 다 쓰는 것", "돈을 친구에게 빌려주는 것", "돈을 잃어버리는 것"], correct: 0 },
+    { q: "용돈을 아끼는 좋은 방법은?", choices: ["필요한 것만 사고 저금통에 모은다", "보이는 것마다 전부 산다", "용돈을 받자마자 다 써버린다", "친구에게 다 나눠준다"], correct: 0 },
+    { q: "돈이 생겼을 때 가장 먼저 해야 할 일은?", choices: ["얼마를 저축할지 계획 세우기", "바로 원하는 것 사기", "친구에게 자랑하기", "잃어버리지 않게 숨기기"], correct: 0 },
+    { q: "은행은 어떤 곳인가요?", choices: ["돈을 안전하게 맡기고 빌릴 수 있는 곳", "물건을 파는 곳", "음식을 먹는 곳", "공부하는 곳"], correct: 0 },
+    { q: "이자란 무엇인가요?", choices: ["은행에 돈을 맡기면 받는 추가 돈", "물건을 살 때 내는 돈", "친구에게 주는 선물", "나라에 내는 세금"], correct: 0 },
+    { q: "소비와 저축 중 무엇이 더 중요한가요?", choices: ["둘 다 중요하고 균형이 필요해요", "소비가 훨씬 더 중요해요", "저축은 필요 없어요", "어른만 저축해요"], correct: 0 },
+    { q: "용돈 기입장은 왜 쓸까요?", choices: ["돈을 어디에 썼는지 알 수 있어서", "선생님이 검사해서", "은행에 제출해야 해서", "친구에게 보여주려고"], correct: 0 },
+    { q: "필요와 욕구의 차이는?", choices: ["필요는 꼭 있어야 하는 것, 욕구는 갖고 싶은 것", "둘 다 꼭 사야 하는 것", "욕구가 필요보다 중요해요", "차이가 없어요"], correct: 0 },
+  ],
+  // ── 공통 심화 (고학년) ──────────────────────────────
+  common_high: [
+    { q: "복리란 무엇인가요?", choices: ["이자에 또 이자가 붙어 돈이 불어나는 것", "이자가 줄어드는 것", "원금만 돌려받는 것", "손실이 복구되는 것"], correct: 0 },
+    { q: "인플레이션이란?", choices: ["물가가 전반적으로 오르는 현상", "주가가 오르는 현상", "환율이 내리는 현상", "금리가 오르는 현상"], correct: 0 },
+    { q: "신용카드 사용 시 주의할 점은?", choices: ["갚을 수 있는 만큼만 쓴다", "한도까지 전부 쓴다", "현금보다 항상 유리하다", "이자가 없으므로 마음껏 쓴다"], correct: 0 },
+    { q: "세금은 왜 납부하나요?", choices: ["도로·학교·병원 등 공공서비스를 위해", "은행에 이자를 주기 위해", "기업 이익을 위해", "외국에 원조하기 위해"], correct: 0 },
+    { q: "포트폴리오 분산 투자의 목적은?", choices: ["위험을 줄이기 위해 여러 자산에 나눠 투자", "한 종목에 집중해 수익 극대화", "투자를 하지 않는 것", "항상 현금만 보유하는 것"], correct: 0 },
+    { q: "환율이 오르면 수출 기업에는?", choices: ["유리해진다 (외화 수입이 많아짐)", "불리해진다", "아무 영향 없다", "무조건 망한다"], correct: 0 },
+  ],
+  // ── 우주 테마: 주식·투자 ───────────────────────────
+  space: [
+    { q: "주식이란 무엇인가요?", choices: ["회사의 일부를 소유하는 증서", "은행 저금통장", "나라에 내는 세금", "물건 구입 영수증"], correct: 0 },
+    { q: "주가가 오른다는 것은?", choices: ["회사 가치가 높아져 주식 가격이 상승한 것", "회사가 망한 것", "이자가 오른 것", "세금이 늘어난 것"], correct: 0 },
+    { q: "배당금이란?", choices: ["회사가 이익의 일부를 주주에게 나눠주는 돈", "주식을 살 때 내는 수수료", "세금의 일종", "은행 이자"], correct: 0 },
+    { q: "ETF란?", choices: ["여러 주식을 묶어 만든 펀드를 거래소에서 사고파는 것", "은행 적금 상품", "부동산 투자", "외환 거래"], correct: 0 },
+    { q: "주식 투자의 위험은?", choices: ["주가가 내려가면 손실을 볼 수 있다", "항상 이익이 난다", "은행보다 무조건 안전하다", "세금을 안 내도 된다"], correct: 0 },
+    { q: "코스피(KOSPI)는?", choices: ["한국 주요 기업 주가를 종합한 지수", "미국 주식 지수", "환율 지수", "금값 지수"], correct: 0 },
+    { q: "PER(주가수익비율)이 낮으면?", choices: ["이익 대비 주가가 상대적으로 저렴할 수 있다", "회사가 적자라는 뜻", "주가가 비싸다는 뜻", "배당금이 높다는 뜻"], correct: 0 },
+    { q: "분산 투자를 해야 하는 이유는?", choices: ["한 투자가 실패해도 전체 손실을 줄이기 위해", "더 많은 수익을 내기 위해", "세금을 아끼기 위해", "거래 수수료를 낮추기 위해"], correct: 0 },
+    { q: "장기 투자의 장점은?", choices: ["복리 효과로 시간이 지날수록 자산이 크게 늘어난다", "단기보다 항상 수익이 높다", "세금이 없다", "손실이 절대 없다"], correct: 0 },
+    { q: "공매도란?", choices: ["없는 주식을 빌려 팔고, 싸게 사서 갚아 차익을 얻는 것", "공짜로 주식을 파는 것", "주식을 사는 것", "배당을 받는 것"], correct: 0 },
+  ],
+  // ── 공룡 테마: 기초 금융·소비·저축 ───────────────────
+  dinosaur: [
+    { q: "예금과 적금의 차이는?", choices: ["예금은 한 번에, 적금은 매달 일정액 납입", "예금은 주식, 적금은 부동산", "둘 다 동일한 상품", "예금은 빌리는 것"], correct: 0 },
+    { q: "통장 잔액이 줄어드는 이유는?", choices: ["지출이 수입보다 많아서", "이자가 너무 높아서", "은행이 돈을 가져가서", "세금을 냈기 때문에"], correct: 0 },
+    { q: "합리적 소비란?", choices: ["필요성과 가격을 따져 현명하게 구매하는 것", "가장 비싼 것을 사는 것", "가장 싼 것만 사는 것", "아무거나 사는 것"], correct: 0 },
+    { q: "저금통의 장점은?", choices: ["동전을 모아 목돈을 만들 수 있다", "이자가 매우 높다", "카드처럼 쓸 수 있다", "세금을 내지 않아도 된다"], correct: 0 },
+    { q: "수입이란 무엇인가요?", choices: ["내가 버는 돈 (용돈, 급여 등)", "내가 쓰는 돈", "세금으로 내는 돈", "빌린 돈"], correct: 0 },
+    { q: "지출이란 무엇인가요?", choices: ["물건이나 서비스를 사기 위해 쓰는 돈", "내가 버는 돈", "저금하는 돈", "이자로 받는 돈"], correct: 0 },
+    { q: "저축 목표를 세우면 좋은 점은?", choices: ["목적이 생겨 저축 의욕이 높아진다", "은행에서 이자를 더 준다", "세금을 덜 낸다", "아무 장점이 없다"], correct: 0 },
+    { q: "충동구매를 피하려면?", choices: ["살 물건 목록을 미리 적고 계획대로만 산다", "신용카드를 많이 가지고 다닌다", "쇼핑몰에 자주 방문한다", "세일이 없어도 바로 산다"], correct: 0 },
+    { q: "중고거래의 장점은?", choices: ["필요한 물건을 저렴하게 살 수 있어 돈을 아낀다", "항상 새 제품보다 좋다", "세금이 없다", "이자가 붙는다"], correct: 0 },
+  ],
+  // ── 마법 테마: 금융상품·자산관리 ─────────────────────
+  magic: [
+    { q: "펀드란 무엇인가요?", choices: ["여러 사람 돈을 모아 전문가가 운용하는 투자 상품", "은행 예금 상품", "나라에 내는 세금", "보험 상품"], correct: 0 },
+    { q: "보험에 가입하는 이유는?", choices: ["예상치 못한 사고·질병 등 위험에 대비하기 위해", "이자를 받기 위해", "주식보다 수익이 높아서", "세금 혜택 때문만은 아니다"], correct: 0 },
+    { q: "연금이란?", choices: ["은퇴 후 생활비를 위해 미리 모아두는 돈", "매달 내는 세금", "은행 대출", "주식 배당금"], correct: 0 },
+    { q: "금리가 오르면 예금 이자는?", choices: ["함께 오른다", "내려간다", "변하지 않는다", "은행이 결정할 수 없다"], correct: 0 },
+    { q: "채권이란?", choices: ["정부·기업이 돈을 빌릴 때 발행하는 증서", "주식의 다른 이름", "토지 소유 증서", "보험 증서"], correct: 0 },
+    { q: "부동산 투자의 특징은?", choices: ["큰 자금이 필요하지만 실물 자산을 보유할 수 있다", "소액으로 쉽게 투자 가능", "원금이 보장된다", "세금이 없다"], correct: 0 },
+    { q: "재무 계획이 필요한 이유는?", choices: ["한정된 돈으로 목표를 효율적으로 달성하기 위해", "세금을 줄이기 위해서만", "은행이 요구하기 때문", "어른만 필요하다"], correct: 0 },
+    { q: "CMA 통장의 특징은?", choices: ["자유롭게 입출금하며 매일 이자가 붙는 통장", "주식에 자동 투자되는 통장", "적금처럼 만기가 있는 통장", "해외 전용 통장"], correct: 0 },
+  ],
+  // ── 바다 테마: 저축·은행·목표 ───────────────────────
+  ocean: [
+    { q: "통장 개설 시 필요한 것은?", choices: ["신분증과 초기 입금액", "주식 계좌", "부동산 증서", "세금 납부 영수증"], correct: 0 },
+    { q: "자동이체 저축의 장점은?", choices: ["매달 자동으로 저축돼 목돈 마련이 쉽다", "이자가 두 배 붙는다", "세금이 없다", "언제든 해지해도 패널티가 없다"], correct: 0 },
+    { q: "비상금이 필요한 이유는?", choices: ["예상치 못한 지출에 대비하기 위해", "이자가 높아서", "세금을 줄이기 위해", "친구에게 빌려주기 위해"], correct: 0 },
+    { q: "금융 사기를 피하려면?", choices: ["출처 불명의 투자 권유는 무조건 의심한다", "높은 수익을 약속하면 바로 투자한다", "모르는 사람에게 계좌 번호를 알려준다", "비밀번호를 여러 사람과 공유한다"], correct: 0 },
+    { q: "정기예금의 특징은?", choices: ["일정 기간 돈을 맡기면 약속된 이자를 받는다", "매달 돈을 넣어야 한다", "원금이 감소할 수 있다", "주식처럼 가격이 변한다"], correct: 0 },
+    { q: "저축 목표 금액을 모으려면?", choices: ["목표액 ÷ 기간 = 매달 저축액 계산하기", "매일 조금씩 써도 모인다", "이자만으로 목표 달성 가능", "저축보다 투자가 무조건 빠르다"], correct: 0 },
+    { q: "체크카드와 신용카드의 차이는?", choices: ["체크카드는 통장 잔액 내에서만 결제된다", "체크카드가 이자가 더 높다", "신용카드는 쓸 수 없는 카드다", "둘 다 빚이 생기는 카드다"], correct: 0 },
+    { q: "ISA(개인종합자산관리계좌)의 장점은?", choices: ["한 계좌에서 예금·펀드·ETF 등을 관리하며 세금 혜택", "원금이 두 배로 보장됨", "이자가 매일 지급됨", "주식만 투자 가능"], correct: 0 },
+  ],
+};
+
+// 월드·나이별로 퀴즈 풀 합치기
+function _buildBattlePool() {
+  const world    = (window.GCFG?.world || 'common');
+  const age      = (window.GCFG?.age_group || 'elementary');
+  const isHigh   = age !== 'elementary';
+  const common   = isHigh ? _BQB.common_high : _BQB.common_low;
+  const worldQ   = _BQB[world] || [];
+  return [...common, ...worldQ];
+}
+
+let _usedQuizIdxs = [];
+function _randomQuiz() {
+  const pool = _buildBattlePool();
+  // 모두 사용했으면 리셋
+  if (_usedQuizIdxs.length >= pool.length) _usedQuizIdxs = [];
+  const remaining = pool
+    .map((_, i) => i)
+    .filter(i => !_usedQuizIdxs.includes(i));
+  const pick = remaining[Math.floor(Math.random() * remaining.length)];
+  _usedQuizIdxs.push(pick);
+  return pool[pick];
+}
+
+// ═══════════════════════════════════════════════════════
+//  BATTLE GAME (Stage 2)
+// ═══════════════════════════════════════════════════════
+function startBattleGame(onComplete) {
+  const overlay = document.getElementById('battle-game-overlay');
+  const canvas  = document.getElementById('battle-canvas');
+  const ctx     = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  // 모든 서브 오버레이 초기화
+  ['battle-intro','battle-narration','battle-action-result','battle-result-overlay']
+    .forEach(id => { document.getElementById(id).style.display = 'none'; });
+
+  overlay.style.display = 'flex';
+
+  // ── 인트로 화면 ──────────────────────────────────────
+  const worldName = { space:'별빛 금융 은하', dinosaur:'공룡 정글', magic:'마법 왕국', ocean:'파도 저금섬' }[window.GCFG?.world] || '핀퀘스트';
+  const intro = document.getElementById('battle-intro');
+  document.getElementById('battle-intro-title').textContent = '🚨 긴급 경보! 금융 악당 출현!';
+  document.getElementById('battle-intro-body').innerHTML =
+    `${worldName}에 수상한 악당이 나타났어요!<br>` +
+    `이 악당은 어린이들의 금융 지식을 빼앗으러 왔대요. 😱<br><br>` +
+    `쏠쏠이가 나서야 할 때예요! 퀴즈를 맞혀야만<br>공격과 방어가 가능해요. 용기 있게 도전해보세요! 💪`;
+  intro.style.display = 'flex';
+
+  // 전투 시작 버튼
+  document.getElementById('battle-intro-btn').onclick = () => {
+    intro.style.display = 'none';
+    battleStarted = true;
+    lastTime = null;
+    requestAnimationFrame(loop);
+  };
+
+  const GROUND_Y = H * 0.78; // characters stand at 78% height
+
+  let state = {
+    playerHp: 3, villHp: 3,
+    playerCooldown: 0,    // ms remaining
+    villCooldown: 0,
+    playerState: 'idle',  // idle | attack | hit | defend | blocked
+    villState: 'idle',
+    playerStateTimer: 0,
+    villStateTimer: 0,
+    villMoveTimer: 0,
+    quizActive: false,
+    done: false,
+  };
+
+  // Positions
+  let playerX = W * 0.18;
+  const VILL_X_START = W * 0.78;
+  let villX = VILL_X_START;
+  const PLAYER_SPEED = 5;
+  const keys = { left: false, right: false };
+
+  const ATTACK_COOLDOWN = 3000;
+  const STATE_DURATION  = 500;
+
+  // ── 내레이션 (잠깐 보여주고 callback) ────────────────
+  function showNarration(text, duration, cb) {
+    const el = document.getElementById('battle-narration');
+    document.getElementById('battle-narration-text').innerHTML = text;
+    el.style.display = 'flex';
+    setTimeout(() => { el.style.display = 'none'; cb(); }, duration);
+  }
+
+  // ── 결과 메시지 (잠깐 보여주고 callback) ─────────────
+  function showActionResult(text, color, duration, imgSrc, cb) {
+    const el  = document.getElementById('battle-action-result');
+    const txt = document.getElementById('battle-action-result-text');
+    txt.style.color = color;
+
+    if (imgSrc) {
+      txt.innerHTML =
+        `<img src="${imgSrc}" style="height:130px; object-fit:contain; margin-bottom:12px; display:block; margin-left:auto; margin-right:auto; image-rendering:auto;">` +
+        `<div>${text}</div>`;
+    } else {
+      txt.textContent = text;
+    }
+
+    state.quizActive = true;
+    el.style.display = 'flex';
+    setTimeout(() => { el.style.display = 'none'; state.quizActive = false; cb(); }, duration);
+  }
+
+  // Load images
+  const imgs = {};
+  const imgKeys = ['solsol1','solsol2','solsol3','solsol5','vill1','vill2','vill3','bg_battle'];
+  imgKeys.forEach(k => {
+    const img = new Image();
+    img.src = k === 'bg_battle' ? 'assets/bg_battle.jpg' : `assets/${k}.png`;
+    imgs[k] = img;
+  });
+
+  function getPlayerImg() {
+    if (state.playerState === 'attack')  return imgs.solsol3;
+    if (state.playerState === 'hit')     return imgs.solsol2;
+    if (state.playerState === 'defend')  return imgs.solsol5;
+    return imgs.solsol1;
+  }
+  function getVillImg() {
+    if (state.villState === 'attack')  return imgs.vill3;
+    if (state.villState === 'hit')     return imgs.vill2;
+    if (state.villState === 'blocked') return imgs.vill1; // vill5 없음 → vill1 대체
+    return imgs.vill1;
+  }
+
+  function updateHUD() {
+    const hp = n => '❤️'.repeat(Math.max(0,n)) + '🖤'.repeat(Math.max(0,3-n));
+    document.getElementById('battle-hp-player').textContent = hp(state.playerHp) + ' 쏠쏠이';
+    document.getElementById('battle-hp-vill').textContent   = '빌런 ' + hp(state.villHp);
+    const cd = state.playerCooldown;
+    document.getElementById('battle-cooldown').textContent =
+      cd > 0 ? `쿨타임 ${(cd/1000).toFixed(1)}초` : '⚔️ 공격 준비!';
+  }
+
+  function endBattle(win) {
+    state.done = true;
+    document.getElementById('quiz-overlay').style.display = 'none';
+    const resOv   = document.getElementById('battle-result-overlay');
+    const resTxt  = document.getElementById('battle-result-text');
+    const resBtns = document.getElementById('battle-result-btns');
+    resTxt.textContent = win ? '🎉 쏠쏠이 승리!' : '💀 패배...';
+    resBtns.innerHTML = '';
+    const retryBtn = document.createElement('button');
+    retryBtn.textContent = '🔄 다시 도전';
+    retryBtn.style.cssText = 'padding:14px 32px;font-size:1.1rem;font-weight:800;border:none;border-radius:12px;background:#4361ee;color:white;cursor:pointer;';
+    retryBtn.onclick = () => {
+      resOv.style.display = 'none';
+      overlay.style.display = 'none';
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('keyup', onKeyUp);
+      startBattleGame(onComplete);
+    };
+    const nextBtn = document.createElement('button');
+    nextBtn.textContent = '✅ 완료 & 다음으로';
+    nextBtn.style.cssText = 'padding:14px 32px;font-size:1.1rem;font-weight:800;border:none;border-radius:12px;background:#22c55e;color:white;cursor:pointer;';
+    nextBtn.onclick = () => {
+      resOv.style.display = 'none';
+      overlay.style.display = 'none';
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('keyup', onKeyUp);
+      if (onComplete) onComplete();
+    };
+    resBtns.appendChild(retryBtn);
+    resBtns.appendChild(nextBtn);
+    resOv.style.display = 'flex';
+  }
+
+  // ── Quiz popup — 기존 #quiz-overlay 재사용 ───────────────────
+  // mode: 'attack' | 'defend'
+  function showBattleQuiz(mode, onResolve) {
+    state.quizActive = true;
+    keys.left = keys.right = false;
+
+    // 월드·나이별 배틀 퀴즈 풀에서 선택 (중복 최소화)
+    const raw = _randomQuiz();
+    const quiz = {
+      question: raw.q,
+      choices: raw.choices.map((t, i) => ({ text: t, correct: i === raw.correct })),
+      concept: '금융 개념',
+    };
+
+    // 라벨 변경
+    const label = mode === 'attack'
+      ? '⚔️ 공격 퀴즈! 맞추면 타격 성공!'
+      : '🛡️ 방어 퀴즈! 맞추면 막기 성공!';
+    document.getElementById('quiz-concept').textContent = label;
+    document.getElementById('quiz-question').textContent = quiz.question;
+
+    const box  = document.getElementById('quiz-choices');
+    box.innerHTML = '';
+    const nums = ['① ', '② ', '③ ', '④ '];
+    let answered = false;
+
+    (quiz.choices || []).forEach((ch, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'quiz-btn';
+      btn.textContent = nums[i] + ch.text;
+      btn.onclick = () => {
+        if (answered) return;
+        answered = true;
+        const correct = !!ch.correct;
+
+        if (!correct) {
+          btn.classList.add('shaking');
+          setTimeout(() => btn.classList.remove('shaking'), 450);
+          // 오답: 잠깐 보여주다가 닫기
+          setTimeout(() => {
+            document.getElementById('quiz-overlay').style.display = 'none';
+            state.quizActive = false;
+            onResolve(false);
+          }, 900);
+        } else {
+          btn.style.background = 'rgba(34,197,94,.35)';
+          btn.style.borderColor = '#22c55e';
+          setTimeout(() => {
+            document.getElementById('quiz-overlay').style.display = 'none';
+            state.quizActive = false;
+            onResolve(true);
+          }, 900);
+        }
+      };
+      box.appendChild(btn);
+    });
+
+    // 패널 애니메이션
+    const panel = document.getElementById('quiz-panel');
+    panel.style.animation = 'none';
+    void panel.offsetWidth;
+    panel.style.animation = 'slideUp .4s cubic-bezier(.34,1.56,.64,1)';
+
+    document.getElementById('quiz-overlay').style.display = 'flex';
+  }
+
+  function onKey(e) {
+    if (state.done || state.quizActive) return;
+    if (e.code === 'ArrowLeft')  { keys.left  = true; e.preventDefault(); return; }
+    if (e.code === 'ArrowRight') { keys.right = true; e.preventDefault(); return; }
+    if (e.code !== 'Space') return;
+    e.preventDefault();
+    if (state.playerCooldown > 0) return;
+    const dist = Math.abs(villX - playerX);
+    if (dist >= W * 0.12) return; // 범위 밖이면 무시
+    state.playerCooldown = ATTACK_COOLDOWN;
+    state.playerState = 'attack';
+    state.playerStateTimer = STATE_DURATION;
+    state.quizActive = true;
+    // 내레이션 → 퀴즈
+    showNarration('⚔️ 악당에게 돌격했어요!<br><span style="font-size:1.1rem;color:#fbbf24;">퀴즈를 맞혀서 공격을 성공시켜보세요!</span>', 1400, () => {
+      showBattleQuiz('attack', (correct) => {
+        if (correct) {
+          showActionResult('💥 공격 성공!', '#fbbf24', 1000, null, () => {
+            state.villState = 'hit';
+            state.villStateTimer = STATE_DURATION;
+            state.villHp--;
+            updateHUD();
+            if (state.villHp <= 0) { setTimeout(() => endBattle(true), 600); }
+          });
+        } else {
+          showActionResult('🛡️ 악당이 막아냈어요!', '#94a3b8', 1000, 'assets/vill5.png', () => {
+            state.villState = 'blocked';
+            state.villStateTimer = STATE_DURATION;
+            updateHUD();
+          });
+        }
+      });
+    });
+  }
+  function onKeyUp(e) {
+    if (e.code === 'ArrowLeft')  keys.left  = false;
+    if (e.code === 'ArrowRight') keys.right = false;
+  }
+  document.addEventListener('keydown', onKey);
+  document.addEventListener('keyup', onKeyUp);
+
+  let battleStarted = false;
+  let lastTime = null;
+  function loop(ts) {
+    if (!battleStarted) return;
+    if (state.done) return;
+    const dt = lastTime ? Math.min(ts - lastTime, 100) : 16;
+    lastTime = ts;
+
+    if (!state.quizActive) {
+      // ── Player movement ──
+      const CHAR_W_MOVE = H * 0.19 * 0.7;
+      if (keys.left)  playerX = Math.max(CHAR_W_MOVE / 2, playerX - PLAYER_SPEED);
+      if (keys.right) playerX = Math.min(W - CHAR_W_MOVE / 2, playerX + PLAYER_SPEED);
+
+      // ── Update timers ──
+      if (state.playerCooldown > 0) state.playerCooldown = Math.max(0, state.playerCooldown - dt);
+      if (state.playerStateTimer > 0) {
+        state.playerStateTimer -= dt;
+        if (state.playerStateTimer <= 0) state.playerState = 'idle';
+      }
+      if (state.villStateTimer > 0) {
+        state.villStateTimer -= dt;
+        if (state.villStateTimer <= 0) state.villState = 'idle';
+      }
+
+      // ── Villain AI ──
+      state.villMoveTimer -= dt;
+      if (state.villMoveTimer <= 0) {
+        const dist = villX - playerX;
+        if (Math.abs(dist) < W * 0.12) {
+          state.villState = 'attack';
+          state.villStateTimer = STATE_DURATION;
+          if (state.villCooldown <= 0) {
+            state.villCooldown = 2800;
+            state.quizActive = true;
+            // 공격 액션 0.5초 → 내레이션 → 퀴즈
+            setTimeout(() => {
+              showNarration('💢 악당이 공격해왔어요!<br><span style="font-size:1.1rem;color:#f87171;">퀴즈를 맞혀서 방어해보세요!</span>', 1400, () => {
+                showBattleQuiz('defend', (correct) => {
+                  if (correct) {
+                    showActionResult('🛡️ 방어 성공!', '#86efac', 1000, 'assets/solsol5.png', () => {
+                      state.playerState = 'defend';
+                      state.playerStateTimer = STATE_DURATION;
+                    });
+                  } else {
+                    showActionResult('💥 방어 실패...', '#f87171', 1000, null, () => {
+                      state.playerState = 'hit';
+                      state.playerStateTimer = STATE_DURATION;
+                      state.playerHp--;
+                      updateHUD();
+                      if (state.playerHp <= 0) { setTimeout(() => endBattle(false), 600); }
+                    });
+                  }
+                });
+              });
+            }, 500);
+          }
+          state.villMoveTimer = 900;
+        } else {
+          villX += dist > 0 ? -4 : 4;
+          state.villMoveTimer = 30;
+        }
+      }
+      if (state.villCooldown > 0) state.villCooldown = Math.max(0, state.villCooldown - dt);
+    }
+
+    // ── Draw ──
+    if (imgs.bg_battle.complete) {
+      ctx.drawImage(imgs.bg_battle, 0, 0, W, H);
+    } else {
+      ctx.fillStyle = '#1a3a5c';
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    const CHAR_H = H * 0.19;
+    const CHAR_W = CHAR_H * 0.7;
+
+    // Player
+    const pImg = getPlayerImg();
+    const playerFaceRight = playerX < villX;
+    if (pImg && pImg.complete) {
+      if (playerFaceRight) {
+        ctx.drawImage(pImg, playerX - CHAR_W/2, GROUND_Y - CHAR_H, CHAR_W, CHAR_H);
+      } else {
+        ctx.save();
+        ctx.translate(playerX + CHAR_W/2, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(pImg, 0, GROUND_Y - CHAR_H, CHAR_W, CHAR_H);
+        ctx.restore();
+      }
+    }
+
+    // Villain (flipped to face player)
+    const vImg = getVillImg();
+    if (vImg && vImg.complete) {
+      ctx.save();
+      ctx.translate(villX + CHAR_W/2, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(vImg, 0, GROUND_Y - CHAR_H, CHAR_W, CHAR_H);
+      ctx.restore();
+    }
+
+    // HP bars
+    function drawHPBar(x, y, hp, color) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(x - 30, y, 60, 8);
+      ctx.fillStyle = color;
+      ctx.fillRect(x - 30, y, 60 * (hp / 3), 8);
+    }
+    drawHPBar(playerX, GROUND_Y - CHAR_H - 14, state.playerHp, '#22c55e');
+    drawHPBar(villX,   GROUND_Y - CHAR_H - 14, state.villHp,   '#ef4444');
+
+    // Cooldown bar
+    if (state.playerCooldown > 0) {
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.fillRect(playerX - 30, GROUND_Y - CHAR_H - 26, 60, 6);
+      ctx.fillStyle = '#fbbf24';
+      ctx.fillRect(playerX - 30, GROUND_Y - CHAR_H - 26, 60 * (1 - state.playerCooldown / ATTACK_COOLDOWN), 6);
+    }
+
+    updateHUD();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
 }
 </script>
 </body>

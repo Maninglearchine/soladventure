@@ -707,7 +707,7 @@ def _render_shinhan_logo_bar(step: int = 0):
         for i in range(4)
     )
     st.markdown('<div id="top-nav-sentinel"></div>', unsafe_allow_html=True)
-    col_logo, col_dots, col_report = st.columns([2, 4, 2])
+    col_logo, col_dots, col_report, col_battle = st.columns([2, 4, 2, 2])
     with col_logo:
         if st.button("신한은행", key=f"logo_home_{step}", use_container_width=False):
             st.session_state["intro_step"] = 0
@@ -720,6 +720,11 @@ def _render_shinhan_logo_bar(step: int = 0):
     with col_report:
         if st.button("📊 결과 리포트", key=f"temp_report_{step}", use_container_width=True):
             st.session_state["page"] = "report"
+            st.rerun()
+    with col_battle:
+        if st.button("⚔️ 배틀 테스트", key=f"temp_battle_{step}", use_container_width=True):
+            st.session_state["battle_test_mode"] = True
+            st.session_state["page"] = "map"
             st.rerun()
     st.markdown("<div style='margin-bottom:4px'></div>", unsafe_allow_html=True)
 
@@ -1305,6 +1310,7 @@ def page_map(
     )
 
     # ── Render Phaser game ──────────────────────
+    battle_test = st.session_state.pop("battle_test_mode", False)
     result = render_phaser_game(
         world=gs.world,
         character_name=gs.character_name,
@@ -1315,6 +1321,7 @@ def page_map(
         missions=world_missions,
         quizzes=world_quizzes,
         key=f"phaser_{gs.world}",
+        battle_test=battle_test,
     )
 
     # Deduplicate: after st.rerun() the component returns the same last value;
