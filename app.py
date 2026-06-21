@@ -235,9 +235,57 @@ def inject_css(world_id: str = "space"):
         div:has(#top-nav-sentinel) ~ [data-testid="stHorizontalBlock"] > div:first-child [data-testid="stButton"] button:hover {{
             background: rgba(255,255,255,.18) !important; transform: none !important;
         }}
+        /* ── Icon nav buttons (word/allow/save/prod) ── */
+        div:has(#top-nav-sentinel) button[data-testid="stBaseButton-secondary"] {{
+            background: rgba(255,255,255,.1) !important;
+            backdrop-filter: blur(12px) !important;
+            -webkit-backdrop-filter: blur(12px) !important;
+            border: 1px solid rgba(255,255,255,.22) !important;
+            color: white !important;
+            box-shadow: none !important;
+        }}
+        div:has(#top-nav-sentinel) button[data-testid="stBaseButton-secondary"]:hover {{
+            background: rgba(255,255,255,.18) !important;
+            transform: none !important;
+        }}
         </style>
         """,
         unsafe_allow_html=True,
+    )
+    _inject_bgm()
+
+
+# ── Persistent BGM ────────────────────────────────────────────────────────────
+
+def _inject_bgm():
+    """Inject BGM1. Creates the element once; resumes it when returning from game."""
+    import streamlit.components.v1 as components
+    components.html(
+        """
+        <script>
+        (function() {
+            var doc = window.parent.document;
+            var existing = doc.getElementById('app-bgm1');
+            if (existing) {
+                if (existing.paused) existing.play().catch(function(){});
+                return;
+            }
+            var a = doc.createElement('audio');
+            a.id = 'app-bgm1';
+            a.src = '/app/static/bgm1.mp3';
+            a.loop = true;
+            a.volume = 0.35;
+            doc.body.appendChild(a);
+            a.play().catch(function() {
+                doc.addEventListener('click', function resume() {
+                    a.play();
+                    doc.removeEventListener('click', resume);
+                }, { once: true });
+            });
+        })();
+        </script>
+        """,
+        height=0,
     )
 
 
@@ -632,10 +680,24 @@ def _inject_intro_css():
         div:has(#top-nav-sentinel) ~ [data-testid="stHorizontalBlock"] > div:first-child [data-testid="stButton"] button:hover {
             background: rgba(255,255,255,.18) !important; transform: none !important;
         }
+        /* ── All other nav buttons ── */
+        div:has(#top-nav-sentinel) button[data-testid="stBaseButton-secondary"] {
+            background: rgba(255,255,255,.1) !important;
+            backdrop-filter: blur(12px) !important;
+            -webkit-backdrop-filter: blur(12px) !important;
+            border: 1px solid rgba(255,255,255,.22) !important;
+            color: white !important;
+            box-shadow: none !important;
+        }
+        div:has(#top-nav-sentinel) button[data-testid="stBaseButton-secondary"]:hover {
+            background: rgba(255,255,255,.18) !important;
+            transform: none !important;
+        }
         </style>
         """,
         unsafe_allow_html=True,
     )
+    _inject_bgm()
 
 
 def _render_shinhan_logo_bar(step: int = 0):
@@ -645,7 +707,7 @@ def _render_shinhan_logo_bar(step: int = 0):
         for i in range(4)
     )
     st.markdown('<div id="top-nav-sentinel"></div>', unsafe_allow_html=True)
-    col_logo, col_dots = st.columns([2, 5])
+    col_logo, col_dots, col_report = st.columns([2, 4, 2])
     with col_logo:
         if st.button("신한은행", key=f"logo_home_{step}", use_container_width=False):
             st.session_state["intro_step"] = 0
@@ -655,6 +717,10 @@ def _render_shinhan_logo_bar(step: int = 0):
             f'<div class="fq-dots" style="padding-top:12px;">{dots_html}</div>',
             unsafe_allow_html=True,
         )
+    with col_report:
+        if st.button("📊 결과 리포트", key=f"temp_report_{step}", use_container_width=True):
+            st.session_state["page"] = "report"
+            st.rerun()
     st.markdown("<div style='margin-bottom:4px'></div>", unsafe_allow_html=True)
 
 
@@ -1143,6 +1209,9 @@ def _handle_game_event(event: dict, gs: GameState, badge_engine: BadgeEngine):
         gs.coins = max(gs.coins, total)                     # sync (game is source of truth)
         if event.get("correct") and event.get("mission_id"):
             gs.complete_mission(event["mission_id"])
+        if event.get("concept"):
+            history = st.session_state.setdefault("_answer_history", [])
+            history.append({"concept": event["concept"], "correct": bool(event.get("correct"))})
         _post_mission_checks(gs, badge_engine)
         if event.get("correct"):
             st.toast(f"🎉 정답! +{event.get('coins_earned',0)} 코인")
@@ -1458,8 +1527,10 @@ def page_report(gs: GameState, worlds: list, missions: list, badge_engine: Badge
     world_emoji = world["emoji"] if world else "🗺️"
     render_header(gs.character_name, gs.coins, gs.level, world_emoji, gs.world or "ocean")
 
-    from pages.parent_report import render_parent_report
-    render_parent_report(
+    import importlib
+    import pages.parent_report as _pr
+    importlib.reload(_pr)
+    _pr.render_parent_report(
         gs,
         get_generator(),
         badge_engine,
@@ -1613,9 +1684,6 @@ def page_news(gs: GameState):
         st.info("현재 뉴스를 불러올 수 없어요. 잠시 후 다시 시도해주세요!")
 
     st.divider()
-    if st.button("🏆 오늘의 결과 보기", use_container_width=True, type="primary"):
-        gs.go_to("result")
-        st.rerun()
     col1, col2, col3 = st.columns(3)
     with col1:
         if st.button("🎵 동요 배우기", use_container_width=True):
@@ -2470,109 +2538,6 @@ def page_products(gs: GameState):
                 f'<script>window.open("{p["link"]}", "_blank")</script>',
                 unsafe_allow_html=True,
             )
-
-    # ── 자산 증여 상담 챗봇 ─────────────────────────────────────────────────────
-    st.markdown(
-        """
-        <div style="margin:36px 0 20px;text-align:center;">
-          <div style="display:inline-block;background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.3);
-                      border-radius:100px;padding:5px 16px;color:#c084fc;font-size:.76rem;font-weight:700;
-                      letter-spacing:1.2px;margin-bottom:14px;">✦ 부모님 전용 ✦</div>
-          <div style="font-size:2.2rem;margin-bottom:8px;">💸</div>
-          <h3 style="color:white;font-size:1.35rem;font-weight:900;letter-spacing:-.4px;margin:0 0 8px;">
-            자산 증여 상담 챗봇
-          </h3>
-          <p style="color:rgba(255,255,255,.58);font-size:.9rem;margin:0;">
-            자녀에게 자산을 증여할 때 궁금한 점을 편하게 물어보세요
-          </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    GIFT_CHAT_KEY = "gift_chat_history"
-    if GIFT_CHAT_KEY not in st.session_state:
-        st.session_state[GIFT_CHAT_KEY] = []
-
-    # 대화 이력 표시
-    chat_history = st.session_state[GIFT_CHAT_KEY]
-    if chat_history:
-        for msg in chat_history:
-            is_user = msg["role"] == "user"
-            bubble_style = (
-                "background:rgba(67,97,238,.35);border:1px solid rgba(67,97,238,.5);"
-                "margin-left:auto;text-align:right;"
-                if is_user else
-                "background:rgba(168,85,247,.18);border:1px solid rgba(168,85,247,.3);"
-            )
-            icon = "👤" if is_user else "🤖"
-            st.markdown(
-                f'<div style="{bubble_style}border-radius:18px;padding:12px 16px;'
-                f'margin-bottom:10px;max-width:85%;font-size:.9rem;'
-                f'color:rgba(255,255,255,.92);line-height:1.7;">'
-                f'<span style="font-size:.75rem;opacity:.6;">{icon}</span><br>{msg["content"]}</div>',
-                unsafe_allow_html=True,
-            )
-    else:
-        st.markdown(
-            '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);'
-            'border-radius:16px;padding:20px;text-align:center;color:rgba(255,255,255,.4);font-size:.88rem;">'
-            '💬 증여세, 미성년 계좌 개설, 절세 방법 등 무엇이든 물어보세요!</div>',
-            unsafe_allow_html=True,
-        )
-
-    # 입력 폼
-    with st.form("gift_chat_form", clear_on_submit=True):
-        user_q = st.text_input(
-            "질문 입력",
-            placeholder="예) 미성년 자녀에게 증여세 없이 줄 수 있는 한도가 얼마예요?",
-            label_visibility="collapsed",
-        )
-        col_send, col_clear = st.columns([4, 1])
-        with col_send:
-            submitted = st.form_submit_button("💬 보내기", use_container_width=True, type="primary")
-        with col_clear:
-            cleared = st.form_submit_button("🗑️", use_container_width=True)
-
-    if cleared:
-        st.session_state[GIFT_CHAT_KEY] = []
-        st.rerun()
-
-    if submitted and user_q.strip():
-        st.session_state[GIFT_CHAT_KEY].append({"role": "user", "content": user_q.strip()})
-
-        _GIFT_SYSTEM = """당신은 대한민국 자산 증여 전문 상담사입니다. 부모가 미성년 또는 성인 자녀에게 자산을 증여할 때 필요한 모든 정보를 친절하고 명확하게 안내합니다.
-
-아래 내용을 중심으로 답변하세요:
-- 증여세 기본 구조 및 세율 (10~50%)
-- 증여재산 공제 한도: 미성년 자녀 10년간 2,000만원, 성인 자녀 5,000만원
-- 절세 전략: 분할 증여, 조기 증여, 교육비·결혼자금 비과세 특례
-- 금융 자산 증여 방법: 현금, 주식, 펀드, 보험
-- 미성년 자녀 금융 계좌 개설 절차
-- 증여 계약서 작성 및 신고 절차 (증여세 신고 기한: 증여일로부터 3개월)
-- 신한은행 어린이 금융 상품 활용법
-
-답변은 한국어로, 간결하고 이해하기 쉽게 해주세요. 구체적인 금액이나 세율이 있으면 예시를 들어 설명하세요.
-중요: 법적 효력이 있는 최종 판단은 세무사·법무사와 상담하도록 안내하세요."""
-
-        with st.spinner("답변 생성 중..."):
-            try:
-                from openai import OpenAI as _OAI
-                _cli = _OAI()
-                _msgs = [{"role": "system", "content": _GIFT_SYSTEM}] + st.session_state[GIFT_CHAT_KEY]
-                _resp = _cli.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=_msgs,
-                    max_tokens=800,
-                    temperature=0.5,
-                )
-                ai_reply = _resp.choices[0].message.content
-                st.session_state[GIFT_CHAT_KEY].append({"role": "assistant", "content": ai_reply})
-            except Exception as e:
-                st.session_state[GIFT_CHAT_KEY].append(
-                    {"role": "assistant", "content": f"⚠️ 오류가 발생했어요: {e}"}
-                )
-        st.rerun()
 
     st.divider()
     st.markdown('<p style="color:rgba(255,255,255,.6);font-size:.88rem;font-weight:700;margin:0 0 10px;">📌 알아두면 좋아요!</p>', unsafe_allow_html=True)

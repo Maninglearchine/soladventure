@@ -1,10 +1,9 @@
 """
-Parent Report Page — 4-tab breakdown of today's financial learning.
+Parent Report Page — 3-tab breakdown of today's financial learning.
 """
 from __future__ import annotations
 
 import json
-import math
 import os
 
 import plotly.graph_objects as go
@@ -13,6 +12,49 @@ import streamlit as st
 from ui.portfolio_chart import PortfolioChart, WORLD_COLORS
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# ── Constants (kept in sync with app.py) ─────────────────────────────────────
+
+CHAR_EVOLUTION = {
+    "쏠쏠이": [
+        {"emoji": "⭐",  "tier_name": "새싹 탐험가", "desc": "금융 여행을 막 시작했어요!"},
+        {"emoji": "🌟",  "tier_name": "금융 전사",   "desc": "주식 지식이 쑥쑥 자라고 있어요!"},
+        {"emoji": "💫",  "tier_name": "주식 마스터", "desc": "완벽한 금융 달인이 됐어요! 👑"},
+    ],
+    "몰리": [
+        {"emoji": "🌸",  "tier_name": "새싹 탐험가", "desc": "금융 여행을 막 시작했어요!"},
+        {"emoji": "🌺",  "tier_name": "금융 전사",   "desc": "주식 지식이 쑥쑥 자라고 있어요!"},
+        {"emoji": "💎",  "tier_name": "주식 마스터", "desc": "완벽한 금융 달인이 됐어요! 👑"},
+    ],
+    "쏠리": [
+        {"emoji": "🌊",  "tier_name": "새싹 탐험가", "desc": "금융 여행을 막 시작했어요!"},
+        {"emoji": "🌈",  "tier_name": "금융 전사",   "desc": "주식 지식이 쑥쑥 자라고 있어요!"},
+        {"emoji": "⚡",  "tier_name": "주식 마스터", "desc": "완벽한 금융 달인이 됐어요! 👑"},
+    ],
+}
+
+WORLD_FINANCIAL_TIPS = {
+    "space": [
+        "주식은 회사의 아주 작은 조각을 사는 거예요!",
+        "주식 가격은 오르기도 하고 내리기도 해요 — 길게 보는 게 포인트예요!",
+        "여러 주식에 나눠 투자하는 '분산 투자'가 안전해요!",
+    ],
+    "dinosaur": [
+        "저금은 미래를 위해 지금 돈을 모아두는 것이에요!",
+        "용돈을 계획적으로 쓰면 더 많은 돈을 모을 수 있어요!",
+        "작은 금액도 꾸준히 모으면 큰돈이 돼요!",
+    ],
+    "magic": [
+        "예산을 세우면 돈을 더 현명하게 쓸 수 있어요!",
+        "필요한 것과 갖고 싶은 것을 구분하는 게 중요해요!",
+        "복리로 굴리면 시간이 지날수록 돈이 쑥쑥 늘어나요!",
+    ],
+    "ocean": [
+        "보험은 갑작스러운 사고나 병을 대비하는 안전망이에요!",
+        "빌린 돈(부채)은 꼭 갚아야 해요. 이자도 붙어요!",
+        "세금은 우리가 함께 쓰는 도로·학교·병원을 만들어요!",
+    ],
+}
 
 # ── Static product cards ─────────────────────────────────────────────────────
 
@@ -55,7 +97,6 @@ def _load_missions() -> list:
 
 
 def _get_learned_concepts(gs, missions: list) -> list[dict]:
-    """Map completed mission IDs → concept_card dicts (deduped)."""
     done_ids = set(gs.completed_missions)
     seen, result = set(), []
     for m in missions:
@@ -70,7 +111,6 @@ def _get_learned_concepts(gs, missions: list) -> list[dict]:
                 "emoji": cc.get("emoji", "💡"),
                 "body":  cc.get("body",  ""),
             })
-    # Also pick up concepts from Phaser NPC quizzes stored in session state quizzes
     for q in (st.session_state.get(f"_quizzes_{gs.world}") or []):
         cc = q.get("concept_card", {})
         title = cc.get("title", "")
@@ -85,9 +125,8 @@ def _get_learned_concepts(gs, missions: list) -> list[dict]:
 
 
 def _get_weak_concepts(history: list) -> list[str]:
-    """Concepts with correct-rate < 60 %."""
     from collections import defaultdict
-    counts: dict = defaultdict(lambda: [0, 0])  # [correct, total]
+    counts: dict = defaultdict(lambda: [0, 0])
     for h in history:
         c = h.get("concept", "")
         if not c:
@@ -102,10 +141,7 @@ def _get_weak_concepts(history: list) -> list[str]:
 
 
 def _generate_parent_text(gs, concepts: list, generator) -> str:
-    """Call OpenAI to generate a warm parent-facing report."""
     concept_names = ", ".join(c["title"] for c in concepts[:6]) if concepts else "금융 기초 개념"
-
-    # Try to get OpenAI client from generator or directly
     client = None
     try:
         if hasattr(generator, "_client"):
@@ -121,7 +157,6 @@ def _generate_parent_text(gs, concepts: list, generator) -> str:
                 client = OpenAI(api_key=key)
         except ImportError:
             pass
-
     if client is None:
         return _default_parent_text(gs, concepts)
 
@@ -161,100 +196,107 @@ def _default_parent_text(gs, concepts: list) -> str:
     )
 
 
-# ── Monthly savings compound chart ───────────────────────────────────────────
-
-def _monthly_compound_chart(world_id: str) -> go.Figure:
-    """Bar chart: save 10,000원/month at 3% for 10/20/30 years."""
-    color = WORLD_COLORS.get(world_id, "#0ea5e9")
-    monthly, rate = 10_000, 0.03
-    r12 = rate / 12
-
-    years_list = [10, 20, 30]
-    compound = [
-        round(monthly * ((1 + r12) ** (y * 12) - 1) / r12)
-        for y in years_list
-    ]
-    simple = [monthly * 12 * y for y in years_list]
-    labels = [f"{y}년" for y in years_list]
-
-    fig = go.Figure()
-    r, g, b = tuple(int(color.lstrip("#")[i:i+2], 16) for i in (0, 2, 4))
-    fig.add_trace(go.Bar(
-        name="단순 저축", x=labels, y=simple,
-        marker_color=f"rgba({r},{g},{b},0.35)",
-        hovertemplate="%{x}: %{y:,.0f}원<extra>단순 저축</extra>",
-    ))
-    fig.add_trace(go.Bar(
-        name="복리 저축 (3%)", x=labels, y=compound,
-        marker_color=color,
-        hovertemplate="%{x}: %{y:,.0f}원<extra>복리</extra>",
-    ))
-    fig.add_annotation(
-        x="30년", y=compound[-1],
-        text=f"복리: {compound[-1]/10000:,.0f}만원!",
-        showarrow=True, arrowhead=2, arrowcolor=color,
-        font=dict(size=11, color=color), bgcolor="white",
-        bordercolor=color, borderwidth=1,
-    )
-    fig.update_layout(
-        barmode="group", height=320,
-        margin=dict(l=10, r=10, t=50, b=10),
-        xaxis=dict(title="저축 기간"),
-        yaxis=dict(title="금액 (원)", showgrid=True, gridcolor="#f3f4f6"),
-        paper_bgcolor="white", plot_bgcolor="white",
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-        title=dict(
-            text="💡 매달 10,000원씩 저축하면? (연 3% 복리 기준)",
-            font=dict(size=14), x=0.5,
-        ),
-    )
-    return fig
-
-
 # ── Tab renderers ────────────────────────────────────────────────────────────
 
 def _tab_learning(gs, concepts: list, history: list, badge_engine):
-    st.markdown(f"### 📚 {gs.character_name or '탐험가'}의 오늘 학습 요약")
+    name   = gs.character_name or "쏠쏠이"
+    coins  = gs.coins
+    world  = gs.world or "space"
 
-    # ── 3 metric cards ──
+    evolutions = CHAR_EVOLUTION.get(name, CHAR_EVOLUTION["쏠쏠이"])
+    tier = 2 if coins >= 100 else (1 if coins >= 50 else 0)
+    evo  = evolutions[tier]
+
+    tc    = ["#fbbf24", "#a78bfa", "#818cf8"][tier]
+    tglow = ["rgba(251,191,36,.6)", "rgba(167,139,250,.6)", "rgba(129,140,248,.7)"][tier]
+    tbg   = ["rgba(251,191,36,.08)", "rgba(167,139,250,.1)", "rgba(129,140,248,.12)"][tier]
+    stars = "⭐" * (tier + 1) + "✩" * (2 - tier)
+    medal = ["🥉", "🥈", "🥇"][tier]
+
     dynamic_done = sum(
         1 for k, v in st.session_state.items()
         if isinstance(k, str) and k.startswith("dynamic_done_") and v
     )
-    total_done  = len(gs.completed_missions) + dynamic_done
-    accuracy    = (
+    total_done = len(gs.completed_missions) + dynamic_done
+    accuracy = (
         sum(1 for h in history if h.get("correct")) / len(history) * 100
         if history else 0
     )
+    wko = {"space": "별빛 금융 은하", "dinosaur": "공룡 정글",
+           "magic": "마법왕국", "ocean": "파도 저금섬"}.get(world, "핀퀘스트")
+    tips = WORLD_FINANCIAL_TIPS.get(world, WORLD_FINANCIAL_TIPS["space"])
 
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.metric("✅ 완료 미션", f"{total_done}개")
-    with c2:
-        st.metric("💰 코인 잔액", f"{gs.coins}")
-    with c3:
-        st.metric("🎯 정답률", f"{accuracy:.0f}%")
+    st.markdown(
+        f"""
+        <style>
+        @keyframes floatY {{ 0%,100%{{transform:translateY(0)}} 50%{{transform:translateY(-12px)}} }}
+        @keyframes popIn  {{ from{{opacity:0;transform:scale(.8)}} to{{opacity:1;transform:scale(1)}} }}
+        @keyframes pulse  {{ 0%,100%{{box-shadow:0 0 0 0 {tglow}}} 70%{{box-shadow:0 0 0 16px transparent}} }}
+        .rv-hero {{ text-align:center; padding:20px 0 12px; animation:popIn .6s cubic-bezier(.34,1.56,.64,1); }}
+        .rv-orb {{
+            display:inline-flex; align-items:center; justify-content:center;
+            width:120px; height:120px; border-radius:50%;
+            background:radial-gradient(circle at 35% 35%, {tc}44, {tc}11);
+            border:2px solid {tc}55;
+            box-shadow:0 0 50px {tc}44;
+            animation:floatY 3s ease-in-out infinite, pulse 2.5s ease-in-out infinite;
+            font-size:4rem; margin:0 auto 14px;
+        }}
+        .rv-tier-badge {{
+            display:inline-block; background:{tbg};
+            border:1.5px solid {tc}66; border-radius:100px;
+            padding:6px 20px; color:{tc}; font-size:.95rem; font-weight:900;
+            margin-bottom:8px;
+        }}
+        .rv-bento {{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin:18px 0; }}
+        .rv-box {{
+            background:{tbg}; border:1px solid {tc}33; border-radius:18px;
+            padding:18px 10px; text-align:center;
+        }}
+        .rv-num {{ font-size:1.8rem; font-weight:900; color:{tc}; line-height:1.2; }}
+        .rv-lbl {{ font-size:.72rem; color:rgba(255,255,255,.5); margin-top:4px; letter-spacing:.3px; }}
+        .rv-tip {{
+            display:flex; align-items:flex-start; gap:10px;
+            background:rgba(255,255,255,.05);
+            border:1px solid rgba(255,255,255,.1);
+            border-left:3px solid {tc};
+            border-radius:0 14px 14px 0;
+            padding:11px 14px; margin-bottom:8px;
+            color:rgba(255,255,255,.82); font-size:.88rem; line-height:1.7;
+        }}
+        </style>
+        <div class="rv-hero">
+          <div class="rv-orb">{evo['emoji']}</div>
+          <div class="rv-tier-badge">{evo['tier_name']}</div>
+          <p style="color:rgba(255,255,255,.6);font-size:.88rem;margin:4px 0;">{evo['desc']}</p>
+          <div style="font-size:1.5rem;letter-spacing:4px;margin:8px 0;">{stars}</div>
+        </div>
+        <div class="rv-bento">
+          <div class="rv-box"><div class="rv-num">🪙 {coins}</div><div class="rv-lbl">모은 쏠코인</div></div>
+          <div class="rv-box"><div class="rv-num">{total_done}</div><div class="rv-lbl">완료 미션</div></div>
+          <div class="rv-box"><div class="rv-num">{accuracy:.0f}%</div><div class="rv-lbl">정답률</div></div>
+        </div>
+        <p style="color:white;font-size:.95rem;font-weight:800;margin:6px 0 12px;">📚 오늘 배운 금융 지식</p>
+        {''.join(f'<div class="rv-tip"><span>💡</span><span>{t}</span></div>' for t in tips)}
+        """,
+        unsafe_allow_html=True,
+    )
 
-    st.divider()
-
-    # ── Concepts learned ──
     if concepts:
+        st.divider()
         st.markdown("#### 📖 오늘 배운 금융 개념")
         for c in concepts:
             st.markdown(
                 f"""<div style="display:flex;align-items:center;gap:8px;
                     padding:7px 12px;margin-bottom:5px;
-                    background:#f8fafc;border-radius:8px;border-left:3px solid #22c55e;">
+                    background:rgba(255,255,255,.06);border-radius:8px;border-left:3px solid {tc};">
                     <span style="font-size:1.3rem;">{c['emoji']}</span>
-                    <div><b>{c['title']}</b>
-                    {"<br><span style='font-size:0.82rem;color:#6b7280;'>" + c['body'] + "</span>" if c['body'] else ""}
+                    <div style="color:rgba(255,255,255,.9);"><b>{c['title']}</b>
+                    {"<br><span style='font-size:0.82rem;color:rgba(255,255,255,.5);'>" + c['body'] + "</span>" if c['body'] else ""}
                     </div></div>""",
                 unsafe_allow_html=True,
             )
-    else:
-        st.info("아직 완료된 미션이 없어요. 탐험을 시작해봐요! 🗺️")
 
-    # ── Weak concepts ──
     weak = _get_weak_concepts(history)
     if weak:
         st.divider()
@@ -262,75 +304,205 @@ def _tab_learning(gs, concepts: list, history: list, badge_engine):
         for w in weak:
             st.warning(f"💡 **{w}** — 한 번 더 도전해봐요!")
 
-    st.divider()
-
-    # ── Concept radar ──
-    chart = PortfolioChart()
-    scores = chart.build_concept_scores(history)
-    if any(v > 0 for v in scores.values()):
-        st.markdown("#### 🧠 금융 개념 이해도 레이더")
-        fig = chart.render_concept_radar(scores, gs.world or "ocean")
-        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
-
-
-def _tab_assets(gs, history: list):
-    world_id = gs.world or "ocean"
-    coin_log  = st.session_state.get("coin_log", [])
-    chart     = PortfolioChart()
-
-    st.markdown("### 📈 코인 누적 기록")
-    fig_hist = chart.render_coin_history(coin_log, world_id)
-    st.plotly_chart(fig_hist, use_container_width=True, config={"displayModeBar": False})
-
-    st.divider()
-    st.markdown("### 💰 복리 성장 시뮬레이션")
-    st.caption("아이가 매달 10,000원씩 저축하면 얼마나 불어날까요? (연 3% 복리 기준)")
-    fig_sim = _monthly_compound_chart(world_id)
-    st.plotly_chart(fig_sim, use_container_width=True, config={"displayModeBar": False})
-
-    # Quick comparison call-out
-    r12 = 0.03 / 12
-    comp_30 = round(10_000 * ((1 + r12) ** 360 - 1) / r12)
-    simp_30 = 10_000 * 12 * 30
-    extra   = comp_30 - simp_30
-    st.success(
-        f"💡 30년 복리 저축이면 단순 저축보다 **{extra:,}원** 더 모을 수 있어요!"
-    )
+    if history:
+        st.divider()
+        chart = PortfolioChart()
+        scores = chart.build_concept_scores(history)
+        if any(v > 0 for v in scores.values()):
+            st.markdown("#### 🧠 금융 개념 이해도 레이더")
+            fig = chart.render_concept_radar(scores, gs.world or "ocean")
+            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 
 def _tab_badges(gs, badge_engine):
-    chart = PortfolioChart()
-    chart.render_badge_progress(badge_engine, gs)
-
-    next_b = badge_engine.get_next_badge(gs)
-    if next_b:
-        pct = badge_engine.badge_progress_pct(next_b, gs)
-        st.divider()
-        st.markdown("#### 🎯 다음 목표 뱃지")
-        st.markdown(
-            f"""<div style="background:#f0fdf4;border:2px solid #22c55e;
-                border-radius:12px;padding:16px;text-align:center;">
-                <div style="font-size:2.5rem;">{next_b['emoji']}</div>
-                <div style="font-size:1.1rem;font-weight:700;margin:6px 0;">{next_b['name']}</div>
-                <div style="font-size:0.9rem;color:#166534;">{next_b['desc']}</div>
-                <div style="font-size:0.85rem;color:#6b7280;margin-top:8px;">달성까지 {pct:.0%}</div>
-            </div>""",
-            unsafe_allow_html=True,
-        )
-        st.progress(pct)
-
     from game.badge_engine import BADGES
-    earned = len(gs.badges)
-    total  = len(BADGES)
+
+    earned_ids = set(gs.badges)
+    earned = [b for b in BADGES if b["id"] in earned_ids]
+    unearned = [b for b in BADGES if b["id"] not in earned_ids]
+
+    st.markdown("### 🏅 획득한 뱃지")
+    if earned:
+        cols = st.columns(4)
+        for i, b in enumerate(earned):
+            with cols[i % 4]:
+                bdesc = b["desc"]
+                bname = b["name"]
+                bemoji = b["emoji"]
+                st.markdown(
+                    f'<div title="달성! {bdesc}" style="'
+                    f'background:rgba(255,215,0,.12);border:2px solid rgba(255,215,0,.4);'
+                    f'border-radius:16px;padding:14px 8px;text-align:center;cursor:default;">'
+                    f'<div style="font-size:2rem;">{bemoji}</div>'
+                    f'<div style="font-size:.78rem;font-weight:700;color:#fde68a;margin-top:6px;">{bname}</div>'
+                    f'<div style="font-size:.68rem;color:rgba(255,255,255,.45);margin-top:3px;">{bdesc}</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+    else:
+        st.info("아직 획득한 뱃지가 없어요. 미션을 완료해봐요! 🗺️")
+
+    if unearned:
+        st.divider()
+        st.markdown("### 🎯 획득 가능한 뱃지")
+        cols = st.columns(4)
+        for i, b in enumerate(unearned):
+            metrics = badge_engine._get_metrics(gs)
+            current = metrics.get(b["type"], 0)
+            pct = min(current / b["threshold"], 1.0) if b["threshold"] > 0 else 0
+            how = _badge_how_to_earn(b)
+            with cols[i % 4]:
+                st.markdown(
+                    f'<div title="{how}" style="'
+                    f'background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);'
+                    f'border-radius:16px;padding:14px 8px;text-align:center;cursor:default;'
+                    f'filter:grayscale(80%);opacity:.7;">'
+                    f'<div style="font-size:2rem;">{b["emoji"]}</div>'
+                    f'<div style="font-size:.78rem;font-weight:700;color:rgba(255,255,255,.6);margin-top:6px;">{b["name"]}</div>'
+                    f'<div style="font-size:.68rem;color:rgba(255,255,255,.35);margin-top:3px;">{how}</div>'
+                    f'<div style="background:rgba(255,255,255,.1);border-radius:4px;margin-top:8px;height:4px;">'
+                    f'<div style="background:#a78bfa;width:{pct*100:.0f}%;height:4px;border-radius:4px;"></div></div>'
+                    f'<div style="font-size:.62rem;color:rgba(255,255,255,.3);margin-top:3px;">{current:.0f} / {b["threshold"]}</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+
+    total = len(BADGES)
+    n_earned = len(earned)
     st.divider()
-    st.markdown(f"**전체 뱃지 달성률:** {earned} / {total}  ({earned/total:.0%})")
-    st.progress(earned / total)
+    st.markdown(f"**전체 뱃지 달성률:** {n_earned} / {total}  ({n_earned/total:.0%})")
+    st.progress(n_earned / total)
+
+
+def _badge_how_to_earn(b: dict) -> str:
+    btype = b.get("type", "")
+    thr = b.get("threshold", 0)
+    mapping = {
+        "missions_completed": f"미션 {thr}개 완료하기",
+        "saving_missions":    f"저축 관련 미션 {thr}개 완료",
+        "invest_missions":    f"투자 관련 미션 {thr}개 완료",
+        "budget_missions":    f"용돈 관련 미션 {thr}개 완료",
+        "interest_missions":  f"이자 관련 미션 {thr}개 완료",
+        "accuracy":           f"정답률 {thr}% 이상 달성",
+        "worlds_visited":     f"{thr}개 이상의 세계에서 미션 완료",
+        "coins":              f"쏠코인 {thr}개 이상 보유",
+    }
+    return mapping.get(btype, b.get("desc", ""))
 
 
 def _tab_products(gs, concepts: list, generator):
     st.markdown("### 👨‍👩‍👧 부모님께 드리는 맞춤 안내")
 
-    # Auto-generate AI report (cached in session state)
+    # ── 자산 증여 상담 챗봇 ───────────────────────────────────────────────────
+    st.markdown(
+        """
+        <div style="margin:4px 0 20px;text-align:center;">
+          <div style="display:inline-block;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.3);
+                      border-radius:100px;padding:5px 16px;color:#a855f7;font-size:.76rem;font-weight:700;
+                      letter-spacing:1.2px;margin-bottom:14px;">✦ 부모님 전용 ✦</div>
+          <div style="font-size:2.2rem;margin-bottom:8px;">💸</div>
+          <h3 style="font-size:1.35rem;font-weight:900;letter-spacing:-.4px;margin:0 0 8px;">
+            자산 증여 상담 챗봇
+          </h3>
+          <p style="font-size:.9rem;color:#6b7280;margin:0;">
+            자녀에게 자산을 증여할 때 궁금한 점을 편하게 물어보세요
+          </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    GIFT_CHAT_KEY = "gift_chat_history"
+    if GIFT_CHAT_KEY not in st.session_state:
+        st.session_state[GIFT_CHAT_KEY] = []
+
+    chat_history = st.session_state[GIFT_CHAT_KEY]
+    if chat_history:
+        for msg in chat_history:
+            is_user = msg["role"] == "user"
+            if is_user:
+                bubble_style = "background:#eff6ff;border:1px solid #bfdbfe;margin-left:auto;text-align:right;"
+                icon, text_color = "👤", "#1e40af"
+            else:
+                bubble_style = "background:#f5f3ff;border:1px solid #ddd6fe;"
+                icon, text_color = "🤖", "#5b21b6"
+            st.markdown(
+                f'<div style="{bubble_style}border-radius:18px;padding:12px 16px;'
+                f'margin-bottom:10px;max-width:85%;font-size:.9rem;'
+                f'color:{text_color};line-height:1.7;">'
+                f'<span style="font-size:.75rem;opacity:.6;">{icon}</span><br>{msg["content"]}</div>',
+                unsafe_allow_html=True,
+            )
+    else:
+        st.markdown(
+            '<div style="background:#f0fdf4;border-left:4px solid #22c55e;'
+            'border-radius:10px;padding:14px 18px;margin-bottom:4px;'
+            'font-size:.92rem;line-height:1.7;color:#1a3a1a;text-align:center;">'
+            '💬 증여세, 미성년 계좌 개설, 절세 방법 등 무엇이든 물어보세요!</div>',
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
+
+    # Input (no form — avoids rerun-inside-form issues in tabs)
+    counter = st.session_state.get("_gift_q_counter", 0)
+    user_q = st.text_input(
+        "질문 입력",
+        placeholder="예) 미성년 자녀에게 증여세 없이 줄 수 있는 한도가 얼마예요?",
+        label_visibility="collapsed",
+        key=f"gift_chat_q_{counter}",
+    )
+    col_send, col_clear = st.columns([4, 1])
+    with col_send:
+        send_clicked = st.button("💬 보내기", use_container_width=True, type="primary", key="gift_send")
+    with col_clear:
+        clear_clicked = st.button("🗑️", use_container_width=True, key="gift_clear")
+
+    if clear_clicked:
+        st.session_state[GIFT_CHAT_KEY] = []
+        st.session_state["_gift_q_counter"] = counter + 1
+        st.rerun()
+
+    if send_clicked and user_q.strip():
+        st.session_state[GIFT_CHAT_KEY].append({"role": "user", "content": user_q.strip()})
+        st.session_state["_gift_q_counter"] = counter + 1
+
+        _GIFT_SYSTEM = """당신은 대한민국 자산 증여 전문 상담사입니다. 부모가 미성년 또는 성인 자녀에게 자산을 증여할 때 필요한 모든 정보를 친절하고 명확하게 안내합니다.
+
+아래 내용을 중심으로 답변하세요:
+- 증여세 기본 구조 및 세율 (10~50%)
+- 증여재산 공제 한도: 미성년 자녀 10년간 2,000만원, 성인 자녀 5,000만원
+- 절세 전략: 분할 증여, 조기 증여, 교육비·결혼자금 비과세 특례
+- 금융 자산 증여 방법: 현금, 주식, 펀드, 보험
+- 미성년 자녀 금융 계좌 개설 절차
+- 증여 계약서 작성 및 신고 절차 (증여세 신고 기한: 증여일로부터 3개월)
+- 신한은행 어린이 금융 상품 활용법
+
+답변은 한국어로, 간결하고 이해하기 쉽게 해주세요. 구체적인 금액이나 세율이 있으면 예시를 들어 설명하세요.
+중요: 법적 효력이 있는 최종 판단은 세무사·법무사와 상담하도록 안내하세요."""
+
+        with st.spinner("답변 생성 중..."):
+            try:
+                from openai import OpenAI as _OAI
+                _cli = _OAI()
+                _msgs = [{"role": "system", "content": _GIFT_SYSTEM}] + st.session_state[GIFT_CHAT_KEY]
+                _resp = _cli.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=_msgs,
+                    max_tokens=800,
+                    temperature=0.5,
+                )
+                ai_reply = _resp.choices[0].message.content
+                st.session_state[GIFT_CHAT_KEY].append({"role": "assistant", "content": ai_reply})
+            except Exception as e:
+                st.session_state[GIFT_CHAT_KEY].append(
+                    {"role": "assistant", "content": f"⚠️ 오류가 발생했어요: {e}"}
+                )
+        st.rerun()
+
+    st.divider()
+
+    # ── AI report ──────────────────────────────────────────────────────────────
     cache_key = "_parent_report_text"
     if not st.session_state.get(cache_key):
         with st.spinner("🤖 AI 리포트를 작성 중이에요..."):
@@ -386,23 +558,19 @@ def _tab_products(gs, concepts: list, generator):
 # ── Public entry point ────────────────────────────────────────────────────────
 
 def render_parent_report(gs, scenario_generator, badge_engine, recommender=None):
-    world_id = gs.world or "ocean"
     missions  = _load_missions()
     concepts  = _get_learned_concepts(gs, missions)
     history   = st.session_state.get("_answer_history", [])
 
-    tab1, tab2, tab3, tab4 = st.tabs(
-        ["📚 오늘의 학습", "📈 자산 성장", "🏅 뱃지 & 성취", "💳 금융상품 안내"]
+    tab1, tab2, tab3 = st.tabs(
+        ["📚 오늘의 학습", "🏅 뱃지 & 성취", "💳 금융상품 안내"]
     )
 
     with tab1:
         _tab_learning(gs, concepts, history, badge_engine)
 
     with tab2:
-        _tab_assets(gs, history)
-
-    with tab3:
         _tab_badges(gs, badge_engine)
 
-    with tab4:
+    with tab3:
         _tab_products(gs, concepts, scenario_generator)

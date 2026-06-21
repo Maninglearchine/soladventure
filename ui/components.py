@@ -22,10 +22,10 @@ def render_header(character_name: str, coins: int, level: int, world_emoji: str,
             justify-content: space-between;
             margin-bottom: 12px;
         ">
-            <div style="font-size:1.4rem; font-weight:700;">
+            <div style="font-size:1.4rem; font-weight:700; color:white;">
                 {world_emoji} &nbsp; {character_name or "탐험가"}
             </div>
-            <div style="display:flex; gap:24px; font-size:1.1rem; font-weight:600;">
+            <div style="display:flex; gap:24px; font-size:1.1rem; font-weight:600; color:white;">
                 <span>🪙 {coins} 코인</span>
                 <span>⭐ Lv.{level}</span>
             </div>

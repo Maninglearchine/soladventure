@@ -641,6 +641,9 @@ class GameScene extends Phaser.Scene {
     };
     const path = charMap[window.GCFG?.character_name];
     if (path) this.load.image('char_player', path);
+
+    this.load.audio('bgm1', 'bgm/bgm1.mp3');
+    this.load.audio('bgm2', 'bgm/bgm2.mp3');
   }
 
   create() {
@@ -674,6 +677,13 @@ class GameScene extends Phaser.Scene {
 
     this.cameras.main.setBounds(0, 0, MAP_PX_W, MAP_PX_H);
     this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
+
+    this.bgm2 = this.sound.add('bgm2', { loop: true, volume: 0.55 });
+    this.bgm2.play();
+    try {
+      var parentBgm = window.parent.document.getElementById('app-bgm1');
+      if (parentBgm) parentBgm.pause();
+    } catch(e) {}
 
     setHeight(510);
   }
@@ -1109,6 +1119,15 @@ class GameScene extends Phaser.Scene {
     panel.style.animation = 'slideUp .4s cubic-bezier(.34,1.56,.64,1)';
 
     document.getElementById('quiz-overlay').style.display = 'flex';
+    this._playBattleBGM();
+  }
+
+  _playBattleBGM() {
+    if (!this.bgm2?.isPlaying) this.bgm2?.play();
+  }
+
+  _playMainBGM() {
+    if (!this.bgm2?.isPlaying) this.bgm2?.play();
   }
 
   // ── Answer handling ───────────────────────────────────
@@ -1136,6 +1155,7 @@ class GameScene extends Phaser.Scene {
 
     // Close quiz, notify Python, show victory sequence
     document.getElementById('quiz-overlay').style.display = 'none';
+    this._playMainBGM();
 
     setVal({
       type: 'QUIZ_RESULT', ts: Date.now(),
@@ -1174,6 +1194,7 @@ class GameScene extends Phaser.Scene {
     // Close feedback after 2 s and handle post-quiz state
     setTimeout(() => {
       document.getElementById('fb-overlay').style.display = 'none';
+      this._playMainBGM();
       this.quizOpen = false;
       const npc     = this.activeNPC;
       this.activeNPC     = null;
