@@ -1878,19 +1878,23 @@ def _build_msg_text(gs: GameState) -> str:
     )
 
 
-def _render_kakao_btn(msg_text: str, height: int = 62):
-    """st.components.v1.html()로 카카오 공유 버튼 렌더 (JS 실행 보장)."""
-    import streamlit.components.v1 as components
-    kakao_key = os.environ.get("KAKAO_JS_KEY", "")
-    msg_js    = json.dumps(msg_text)
+def _render_naver_mail_btn(msg_text: str):
+    """네이버 SMTP로 엄마 이메일에 직접 전송."""
+    import smtplib
+    from email.mime.text import MIMEText
 
-    if not kakao_key:
+    sender   = os.environ.get("NAVER_MAIL_USER", "").strip()
+    password = os.environ.get("NAVER_MAIL_PASS", "").strip()
+    mom_mail = os.environ.get("MOM_EMAIL", "").strip()
+
+    if not sender or not password or not mom_mail:
         st.markdown(
             """
-            <div style="background:rgba(254,229,0,.08);border:1px solid rgba(254,229,0,.25);
+            <div style="background:rgba(3,199,90,.08);border:1px solid rgba(3,199,90,.3);
                         border-radius:18px;padding:14px 20px;text-align:center;">
-              <p style="color:#fde68a;font-size:.85rem;margin:0;">
-                💛 <b>.env</b>에 <code>KAKAO_JS_KEY</code>를 추가하면 카카오톡 버튼이 활성화돼요!
+              <p style="color:#6ee7a0;font-size:.85rem;margin:0;">
+                💌 <b>.env</b>에 <code>NAVER_MAIL_USER</code>, <code>NAVER_MAIL_PASS</code>,
+                <code>MOM_EMAIL</code>을 입력하면 바로 전송돼요!
               </p>
             </div>
             """,
@@ -1898,80 +1902,27 @@ def _render_kakao_btn(msg_text: str, height: int = 62):
         )
         return
 
-    html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head><meta charset="utf-8"></head>
-    <body style="margin:0;padding:4px 0;background:transparent;">
-      <button onclick="doShare()" id="kakaoBtn" style="
-          display:flex;align-items:center;justify-content:center;gap:10px;
-          width:100%;padding:14px 0;border:none;cursor:pointer;
-          background:#FEE500;color:#ffffff;font-weight:800;font-size:1rem;
-          border-radius:12px;box-shadow:0 4px 16px rgba(254,229,0,.4);">
-        <svg width="22" height="22" viewBox="0 0 38 38" fill="none">
-          <ellipse cx="19" cy="18" rx="18" ry="16" fill="#191600"/>
-          <path d="M19 6C12.4 6 7 10.5 7 16c0 3.5 2.1 6.6 5.4 8.5l-1.4 5.1 5.9-3.9c.97.15 1.97.23 3.1.23 6.6 0 12-4.5 12-10S25.6 6 19 6z" fill="#FEE500"/>
-        </svg>
-        💛 카카오톡으로 보내기
-      </button>
-      <div id="errMsg" style="margin-top:8px;font-size:.8rem;color:#f87171;display:none;"></div>
-      <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js"
-              integrity="sha384-TiCUE00h649CAMonG018J2ujOgDKW/kVWlChEuu4jK2vxfAAD0eZxzCKakxg55G4"
-              crossorigin="anonymous"></script>
-      <script>
-        var MSG = {msg_js};
-        window.onload = function() {{
-          try {{
-            if (typeof Kakao !== 'undefined' && !Kakao.isInitialized())
-              Kakao.init('{kakao_key}');
-          }} catch(e) {{}}
-        }};
-        function showErr(msg) {{
-          var el = document.getElementById('errMsg');
-          el.textContent = msg; el.style.display = 'block';
-        }}
-        function shareViaWebAPI() {{
-          if (navigator.share) {{
-            navigator.share({{ title: '쏠어드벤쳐', text: MSG }})
-              .catch(function(){{}});
-          }} else {{
-            navigator.clipboard.writeText(MSG).then(function() {{
-              alert('메시지가 복사됐어요!\\n카카오톡을 열어서 붙여넣기 해주세요 💛');
-            }}).catch(function() {{
-              alert(MSG);
-            }});
-          }}
-        }}
-        function doShare() {{
-          var siteUrl = window.location.origin;
-          if (typeof Kakao === 'undefined') {{
-            showErr('카카오 SDK를 불러오지 못했어요. 인터넷 연결을 확인해주세요.');
-            shareViaWebAPI(); return;
-          }}
-          try {{
-            if (!Kakao.isInitialized()) Kakao.init('{kakao_key}');
-            Kakao.Share.sendDefault({{
-              objectType: 'text',
-              text: MSG,
-              link: {{
-                mobileWebUrl: siteUrl,
-                webUrl: siteUrl,
-              }}
-            }});
-          }} catch(e) {{
-            showErr('카카오 에러: ' + e.message);
-            shareViaWebAPI();
-          }}
-        }}
-      </script>
-    </body>
-    </html>
-    """
-    components.html(html, height=height + 10)
+    if st.button("💌 엄마한테 메일 바로 보내기", use_container_width=True, type="primary", key="naver_mail_btn"):
+        with st.spinner("📨 전송 중..."):
+            try:
+                mime = MIMEText(msg_text, "plain", "utf-8")
+                mime["Subject"] = "📚 [신한 쏠어드벤쳐] 용돈 올려주세요! 🙏"
+                mime["From"]    = sender
+                mime["To"]      = mom_mail
+
+                with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+                    smtp.login(sender, password)
+                    smtp.sendmail(sender, mom_mail, mime.as_string())
+
+                st.success("✅ 엄마한테 메일 전송 완료! 용돈 올려달라고 했어요 🙏")
+            except smtplib.SMTPAuthenticationError as e:
+                st.error(f"❌ 로그인 실패: {e}")
+            except Exception as e:
+                st.error(f"❌ 전송 실패: {e}")
 
 
 def _send_result_sms(gs: GameState):
-    """결과 페이지용 카카오 공유 버튼 렌더."""
+    """결과 페이지용 텔레그램 공유 버튼 렌더."""
     msg_text = _build_msg_text(gs)
     st.markdown(
         f"""
@@ -1985,7 +1936,7 @@ def _send_result_sms(gs: GameState):
         """,
         unsafe_allow_html=True,
     )
-    _render_kakao_btn(msg_text)
+    _render_naver_mail_btn(msg_text)
 
 
 # ── 엄마 조르기 페이지 ────────────────────────────────────────────────────────
@@ -2001,9 +1952,9 @@ def page_joreogi(gs: GameState):
     st.markdown(
         """
         <div style="text-align:center;padding:32px 0 16px;animation:fadeUp .6s ease;">
-          <div style="font-size:4rem;">💛</div>
+          <div style="font-size:4rem;">💌</div>
           <h1 style="color:white;font-size:1.8rem;font-weight:900;margin:12px 0 6px;">엄마에게 조르기</h1>
-          <p style="color:rgba(255,255,255,.6);font-size:.95rem;">카카오톡으로 보내고 용돈을 올려달라고 해봐요!</p>
+          <p style="color:rgba(255,255,255,.6);font-size:.95rem;">메일로 보내고 용돈을 올려달라고 해봐요!</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -2023,8 +1974,8 @@ def page_joreogi(gs: GameState):
         unsafe_allow_html=True,
     )
 
-    # ── 카카오 공유 버튼 ─────────────────────────────────────────────
-    _render_kakao_btn(msg_text)
+    # ── 텔레그램 공유 버튼 ─────────────────────────────────────────────
+    _render_naver_mail_btn(msg_text)
 
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 

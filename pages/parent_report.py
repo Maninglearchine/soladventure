@@ -8,10 +8,125 @@ import os
 
 import plotly.graph_objects as go
 import streamlit as st
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_community.vectorstores import FAISS
+from langchain_core.runnables import RunnablePassthrough
 
 from ui.portfolio_chart import PortfolioChart, WORLD_COLORS
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# ── RAG 설정 ─────────────────────────────────────────────────────────────────
+
+_RAG_PDF_PATH = os.path.join(BASE, "rag", "증여법관련.pdf")
+
+_RAG_PROMPT = """
+당신은 대한민국 자산 증여 전문 상담사입니다.
+아래 참고 문서를 바탕으로 질문에 답변하세요.
+
+답변 작성 규칙:
+1. 구체적인 금액·세율·기간·한도를 숫자로 명시하세요 (예: 10년간 2,000만 원, 세율 10~50%).
+2. 핵심 내용을 먼저 말하고, 이어서 예시나 계산 사례를 들어 설명하세요.
+3. 절차가 있는 경우 ① ② ③ 순서로 단계별로 안내하세요.
+4. 절세 포인트나 주의사항이 있으면 반드시 포함하세요.
+5. 문서에서 특정 조항이나 규정을 인용할 때 답변 본문 안에 명시하세요 (예: "상속세 및 증여세법 제53조에 따르면...").
+6. 답변 마지막에 반드시 다음 문구를 추가하세요:
+   "📌 위 내용은 일반적인 세법 기준이며, 개인 상황에 따라 다를 수 있습니다. 정확한 사항은 세무사 또는 금융 전문가에게 확인하시길 권장합니다."
+
+다음 경우에만 "RAG_INSUFFICIENT" 한 단어만 출력하세요:
+- 참고 문서에 질문과 관련된 내용이 전혀 없는 경우
+
+[참고 문서]
+{context}
+
+[질문]
+{question}
+"""
+
+_GPT_FALLBACK_PROMPT = """
+당신은 대한민국 자산 증여 전문 상담사입니다.
+증여세법 및 관련 세법 지식을 바탕으로 질문에 답변하세요.
+
+답변 작성 규칙:
+1. 구체적인 금액·세율·기간·한도를 숫자로 명시하세요 (예: 10년간 2,000만 원, 세율 10~50%).
+2. 핵심 내용을 먼저 말하고, 이어서 예시나 계산 사례를 들어 설명하세요.
+3. 절차가 있는 경우 ① ② ③ 순서로 단계별로 안내하세요.
+4. 절세 포인트나 주의사항이 있으면 반드시 포함하세요.
+5. 답변 마지막에 반드시 다음 문구를 추가하세요:
+   "📌 위 내용은 일반적인 세법 기준이며, 개인 상황에 따라 다를 수 있습니다. 정확한 사항은 세무사 또는 금융 전문가에게 확인하시길 권장합니다."
+
+다음 경우에만 "GPT_INSUFFICIENT" 한 단어만 출력하세요:
+- 질문이 증여와 전혀 관련 없는 경우
+- 답변이 불가능할 정도로 개인적·구체적인 사례인 경우
+
+[질문]
+{question}
+"""
+
+_UNABLE_TO_ANSWER = (
+    "죄송합니다. 해당 질문에 대해서는 정확한 답변을 드리기 어렵습니다. 😔\n\n"
+    "더 정확한 도움을 받으시려면 **세무사** 또는 **금융 전문가**에게 문의해 주세요."
+)
+
+_WELCOME_MESSAGE = "안녕하세요! 👋 자녀 자산 증여에 관해 무엇이든 편하게 질문해 주세요 😊"
+
+_QUICK_QUESTIONS = [
+    "미성년자 자녀, 증여 공제 한도는 얼마일까?",
+    "성인 자녀, 증여 공제 한도는 얼마일까?",
+    "증여 꿀팁 알려주세요",
+]
+
+
+@st.cache_resource
+def _load_vectorstore(pdf_path: str):
+    loader = PyPDFLoader(pdf_path)
+    docs = loader.load()
+    splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+    splits = splitter.split_documents(docs)
+    vectorstore = FAISS.from_documents(splits, OpenAIEmbeddings())
+    return vectorstore
+
+
+def _answer_with_rag(retriever, llm, question: str):
+    """PDF RAG로 답변. 성공 시 (답변+출처 문자열, True), 문서 부족 시 (None, False)."""
+    docs = retriever.invoke(question)
+    context = "\n\n".join(d.page_content for d in docs)
+
+    prompt = ChatPromptTemplate.from_messages([("user", _RAG_PROMPT)])
+    chain = prompt | llm | StrOutputParser()
+    response = chain.invoke({"context": context, "question": question})
+
+    if "RAG_INSUFFICIENT" in response:
+        return None, False
+
+    # 페이지 번호 수집 (PyPDFLoader는 0-index → +1)
+    pages = sorted(set(
+        int(d.metadata.get("page", 0)) + 1
+        for d in docs
+        if d.metadata.get("page") is not None
+    ))
+    pdf_name = os.path.basename(_RAG_PDF_PATH)
+    if pages:
+        page_str = ", ".join(f"{p}p" for p in pages)
+        source_line = f"\n\n📎 **출처:** {pdf_name} ({page_str})"
+    else:
+        source_line = f"\n\n📎 **출처:** {pdf_name}"
+
+    return response + source_line, True
+
+
+def _answer_with_gpt(llm, question: str):
+    """GPT 자체 지식으로 fallback 답변. 성공 시 답변 문자열, 불가 시 None."""
+    prompt = ChatPromptTemplate.from_messages([("user", _GPT_FALLBACK_PROMPT)])
+    chain = prompt | llm | StrOutputParser()
+    response = chain.invoke({"question": question})
+    if "GPT_INSUFFICIENT" in response:
+        return None
+    return response
 
 # ── Constants (kept in sync with app.py) ─────────────────────────────────────
 
@@ -413,38 +528,67 @@ def _tab_products(gs, concepts: list, generator):
     )
 
     GIFT_CHAT_KEY = "gift_chat_history"
-    if GIFT_CHAT_KEY not in st.session_state:
-        st.session_state[GIFT_CHAT_KEY] = []
+    GIFT_QUICK_KEY = "_gift_quick_question"
+    GIFT_SHOW_QUICK_KEY = "_gift_show_quick"
 
+    # 초기화
+    if GIFT_CHAT_KEY not in st.session_state:
+        st.session_state[GIFT_CHAT_KEY] = [
+            {"role": "assistant", "content": _WELCOME_MESSAGE}
+        ]
+    if GIFT_QUICK_KEY not in st.session_state:
+        st.session_state[GIFT_QUICK_KEY] = None
+    if GIFT_SHOW_QUICK_KEY not in st.session_state:
+        st.session_state[GIFT_SHOW_QUICK_KEY] = True
+
+    # RAG 엔진 로드
+    rag_error = None
+    _llm = None
+    _retriever = None
+    try:
+        with st.spinner("📄 증여 문서를 불러오는 중..."):
+            _llm = ChatOpenAI(temperature=0.2, model="gpt-4o-mini", max_tokens=1200)
+            _vs = _load_vectorstore(_RAG_PDF_PATH)
+            _retriever = _vs.as_retriever(search_type="similarity", search_kwargs={"k": 4})
+    except Exception as _e:
+        rag_error = str(_e)
+
+    if rag_error:
+        st.warning(f"⚠️ RAG 문서 로드 실패 — 기본 GPT 모드로 동작합니다.\n`{rag_error}`")
+
+    # 채팅 히스토리 출력
     chat_history = st.session_state[GIFT_CHAT_KEY]
-    if chat_history:
-        for msg in chat_history:
-            is_user = msg["role"] == "user"
-            if is_user:
-                bubble_style = "background:#eff6ff;border:1px solid #bfdbfe;margin-left:auto;text-align:right;"
-                icon, text_color = "👤", "#1e40af"
-            else:
-                bubble_style = "background:#f5f3ff;border:1px solid #ddd6fe;"
-                icon, text_color = "🤖", "#5b21b6"
-            st.markdown(
-                f'<div style="{bubble_style}border-radius:18px;padding:12px 16px;'
-                f'margin-bottom:10px;max-width:85%;font-size:.9rem;'
-                f'color:{text_color};line-height:1.7;">'
-                f'<span style="font-size:.75rem;opacity:.6;">{icon}</span><br>{msg["content"]}</div>',
-                unsafe_allow_html=True,
-            )
-    else:
+    for msg in chat_history:
+        is_user = msg["role"] == "user"
+        if is_user:
+            bubble_style = "background:#eff6ff;border:1px solid #bfdbfe;margin-left:auto;text-align:right;"
+            icon, text_color = "👤", "#1e40af"
+        else:
+            bubble_style = "background:#f5f3ff;border:1px solid #ddd6fe;"
+            icon, text_color = "🤖", "#5b21b6"
         st.markdown(
-            '<div style="background:#f0fdf4;border-left:4px solid #22c55e;'
-            'border-radius:10px;padding:14px 18px;margin-bottom:4px;'
-            'font-size:.92rem;line-height:1.7;color:#1a3a1a;text-align:center;">'
-            '💬 증여세, 미성년 계좌 개설, 절세 방법 등 무엇이든 물어보세요!</div>',
+            f'<div style="{bubble_style}border-radius:18px;padding:12px 16px;'
+            f'margin-bottom:10px;max-width:85%;font-size:.9rem;'
+            f'color:{text_color};line-height:1.7;">'
+            f'<span style="font-size:.75rem;opacity:.6;">{icon}</span><br>'
+            f'{msg["content"].replace(chr(10), "<br>")}</div>',
             unsafe_allow_html=True,
         )
 
+    # 빠른 질문 버튼
+    if st.session_state[GIFT_SHOW_QUICK_KEY]:
+        st.markdown("##### 💬 이런 것들이 궁금하신가요?")
+        q_cols = st.columns(len(_QUICK_QUESTIONS))
+        for i, (col, question) in enumerate(zip(q_cols, _QUICK_QUESTIONS)):
+            with col:
+                if st.button(question, key=f"gift_quick_{i}", use_container_width=True):
+                    st.session_state[GIFT_QUICK_KEY] = question
+                    st.session_state[GIFT_SHOW_QUICK_KEY] = False
+                    st.rerun()
+
     st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
 
-    # Input (no form — avoids rerun-inside-form issues in tabs)
+    # 입력창
     counter = st.session_state.get("_gift_q_counter", 0)
     user_q = st.text_input(
         "질문 입력",
@@ -459,45 +603,59 @@ def _tab_products(gs, concepts: list, generator):
         clear_clicked = st.button("🗑️", use_container_width=True, key="gift_clear")
 
     if clear_clicked:
-        st.session_state[GIFT_CHAT_KEY] = []
+        st.session_state[GIFT_CHAT_KEY] = [
+            {"role": "assistant", "content": _WELCOME_MESSAGE}
+        ]
+        st.session_state[GIFT_QUICK_KEY] = None
+        st.session_state[GIFT_SHOW_QUICK_KEY] = True
         st.session_state["_gift_q_counter"] = counter + 1
         st.rerun()
 
+    # 질문 처리 (직접 입력 or 빠른 버튼)
+    pending_q = None
     if send_clicked and user_q.strip():
-        st.session_state[GIFT_CHAT_KEY].append({"role": "user", "content": user_q.strip()})
+        pending_q = user_q.strip()
+        st.session_state[GIFT_SHOW_QUICK_KEY] = False
         st.session_state["_gift_q_counter"] = counter + 1
+    elif st.session_state[GIFT_QUICK_KEY]:
+        pending_q = st.session_state[GIFT_QUICK_KEY]
+        st.session_state[GIFT_QUICK_KEY] = None
 
-        _GIFT_SYSTEM = """당신은 대한민국 자산 증여 전문 상담사입니다. 부모가 미성년 또는 성인 자녀에게 자산을 증여할 때 필요한 모든 정보를 친절하고 명확하게 안내합니다.
+    if pending_q:
+        st.session_state[GIFT_CHAT_KEY].append({"role": "user", "content": pending_q})
+        ai_reply = _UNABLE_TO_ANSWER
 
-아래 내용을 중심으로 답변하세요:
-- 증여세 기본 구조 및 세율 (10~50%)
-- 증여재산 공제 한도: 미성년 자녀 10년간 2,000만원, 성인 자녀 5,000만원
-- 절세 전략: 분할 증여, 조기 증여, 교육비·결혼자금 비과세 특례
-- 금융 자산 증여 방법: 현금, 주식, 펀드, 보험
-- 미성년 자녀 금융 계좌 개설 절차
-- 증여 계약서 작성 및 신고 절차 (증여세 신고 기한: 증여일로부터 3개월)
-- 신한은행 어린이 금융 상품 활용법
+        try:
+            if _retriever is not None and _llm is not None:
+                # Stage 1: PDF RAG + 출처
+                with st.spinner("📄 문서에서 답변을 찾는 중..."):
+                    rag_answer, rag_ok = _answer_with_rag(_retriever, _llm, pending_q)
 
-답변은 한국어로, 간결하고 이해하기 쉽게 해주세요. 구체적인 금액이나 세율이 있으면 예시를 들어 설명하세요.
-중요: 법적 효력이 있는 최종 판단은 세무사·법무사와 상담하도록 안내하세요."""
-
-        with st.spinner("답변 생성 중..."):
-            try:
+                if rag_ok:
+                    ai_reply = rag_answer
+                else:
+                    # Stage 2: GPT fallback
+                    with st.spinner("🤖 추가 지식으로 답변을 생성하는 중..."):
+                        gpt_answer = _answer_with_gpt(_llm, pending_q)
+                    if gpt_answer is not None:
+                        ai_reply = gpt_answer
+            else:
+                # RAG 로드 실패 시 직접 GPT 호출
                 from openai import OpenAI as _OAI
                 _cli = _OAI()
-                _msgs = [{"role": "system", "content": _GIFT_SYSTEM}] + st.session_state[GIFT_CHAT_KEY]
+                _msgs = [{"role": m["role"], "content": m["content"]}
+                         for m in st.session_state[GIFT_CHAT_KEY]]
                 _resp = _cli.chat.completions.create(
                     model="gpt-4o-mini",
                     messages=_msgs,
-                    max_tokens=800,
-                    temperature=0.5,
+                    max_tokens=1200,
+                    temperature=0.2,
                 )
                 ai_reply = _resp.choices[0].message.content
-                st.session_state[GIFT_CHAT_KEY].append({"role": "assistant", "content": ai_reply})
-            except Exception as e:
-                st.session_state[GIFT_CHAT_KEY].append(
-                    {"role": "assistant", "content": f"⚠️ 오류가 발생했어요: {e}"}
-                )
+        except Exception as e:
+            ai_reply = f"⚠️ 오류가 발생했어요: {e}"
+
+        st.session_state[GIFT_CHAT_KEY].append({"role": "assistant", "content": ai_reply})
         st.rerun()
 
     st.divider()

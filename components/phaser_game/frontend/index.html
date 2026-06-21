@@ -2066,9 +2066,10 @@ function startBattleGame(onComplete) {
 
     if (imgSrc) {
       txt.innerHTML =
-        `<img src="${imgSrc}" style="height:130px; object-fit:contain; margin-bottom:12px; display:block; margin-left:auto; margin-right:auto; image-rendering:auto;">` +
-        `<div>${text}</div>`;
+        `<img src="${imgSrc}" style="height:130px; object-fit:contain; margin-bottom:12px; display:block; margin-left:auto; margin-right:auto;">` +
+        `<div style="white-space:pre-line;">${text}</div>`;
     } else {
+      txt.style.whiteSpace = 'pre-line';
       txt.textContent = text;
     }
 
@@ -2079,24 +2080,26 @@ function startBattleGame(onComplete) {
 
   // Load images
   const imgs = {};
-  const imgKeys = ['solsol1','solsol2','solsol3','solsol5','vill1','vill2','vill3','bg_battle'];
+  const imgKeys = ['solsol1','solsol2','solsol3','solsol5','vill1','vill2','vill3','vill5','bg_battle'];
   imgKeys.forEach(k => {
     const img = new Image();
     img.src = k === 'bg_battle' ? 'assets/bg_battle.jpg' : `assets/${k}.png`;
     imgs[k] = img;
   });
 
+  function getCharImg(key) { return imgs[key]; }
+
   function getPlayerImg() {
-    if (state.playerState === 'attack')  return imgs.solsol3;
-    if (state.playerState === 'hit')     return imgs.solsol2;
-    if (state.playerState === 'defend')  return imgs.solsol5;
-    return imgs.solsol1;
+    if (state.playerState === 'attack')  return getCharImg('solsol3');
+    if (state.playerState === 'hit')     return getCharImg('solsol2');
+    if (state.playerState === 'defend')  return getCharImg('solsol5');
+    return getCharImg('solsol1');
   }
   function getVillImg() {
-    if (state.villState === 'attack')  return imgs.vill3;
-    if (state.villState === 'hit')     return imgs.vill2;
-    if (state.villState === 'blocked') return imgs.vill1; // vill5 없음 → vill1 대체
-    return imgs.vill1;
+    if (state.villState === 'attack')  return getCharImg('vill3');
+    if (state.villState === 'hit')     return getCharImg('vill2');
+    if (state.villState === 'blocked') return getCharImg('vill5');
+    return getCharImg('vill1');
   }
 
   function updateHUD() {
@@ -2229,7 +2232,13 @@ function startBattleGame(onComplete) {
             state.villStateTimer = STATE_DURATION;
             state.villHp--;
             updateHUD();
-            if (state.villHp <= 0) { setTimeout(() => endBattle(true), 600); }
+            if (state.villHp <= 0) {
+              setTimeout(() => {
+                window.GS.coins = (window.GS.coins || 0) + 50;
+                setVal({ type: 'COIN_COLLECTED', total_coins: window.GS.coins });
+                showActionResult('🏆 빌런 처치 완료!\n+50 쏠코인 획득!', '#ffd700', 2000, 'assets/solsol5.png', () => endBattle(true));
+              }, 600);
+            }
           });
         } else {
           showActionResult('🛡️ 악당이 막아냈어요!', '#94a3b8', 1000, 'assets/vill5.png', () => {
