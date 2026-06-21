@@ -363,22 +363,31 @@ def _tab_learning(gs, concepts: list, history: list, badge_engine):
             padding:6px 20px; color:{tc}; font-size:.95rem; font-weight:900;
             margin-bottom:8px;
         }}
-        .rv-bento {{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin:18px 0; }}
+        .rv-bento {{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin:20px 0; }}
         .rv-box {{
-            background:{tbg}; border:1px solid {tc}33; border-radius:18px;
-            padding:18px 10px; text-align:center;
+            background:rgba(255,255,255,.1);
+            backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+            border:2px solid rgba(255,255,255,.2);
+            border-top:3px solid {tc}AA;
+            border-radius:24px;
+            padding:22px 10px; text-align:center;
+            box-shadow:0 6px 24px rgba(0,0,0,.15);
+            transition:all .25s cubic-bezier(.34,1.56,.64,1);
         }}
-        .rv-num {{ font-size:1.8rem; font-weight:900; color:{tc}; line-height:1.2; }}
-        .rv-lbl {{ font-size:.72rem; color:rgba(255,255,255,.5); margin-top:4px; letter-spacing:.3px; }}
+        .rv-box:hover {{ transform:translateY(-4px); box-shadow:0 14px 36px rgba(0,0,0,.22); }}
+        .rv-num {{ font-size:1.9rem; font-weight:900; color:{tc}; line-height:1.2; }}
+        .rv-lbl {{ font-size:.75rem; color:rgba(255,255,255,.55); margin-top:6px; letter-spacing:.3px; font-weight:700; }}
         .rv-tip {{
-            display:flex; align-items:flex-start; gap:10px;
-            background:rgba(255,255,255,.05);
-            border:1px solid rgba(255,255,255,.1);
-            border-left:3px solid {tc};
-            border-radius:0 14px 14px 0;
-            padding:11px 14px; margin-bottom:8px;
-            color:rgba(255,255,255,.82); font-size:.88rem; line-height:1.7;
+            display:flex; align-items:flex-start; gap:12px;
+            background:rgba(255,255,255,.09);
+            border:1.5px solid rgba(255,255,255,.15);
+            border-left:4px solid {tc};
+            border-radius:0 18px 18px 0;
+            padding:13px 16px; margin-bottom:10px;
+            color:rgba(255,255,255,.85); font-size:.9rem; line-height:1.8;
+            transition:all .2s ease;
         }}
+        .rv-tip:hover {{ background:rgba(255,255,255,.14); transform:translateX(3px); }}
         </style>
         <div class="rv-hero">
           <div class="rv-orb">{evo['emoji']}</div>
@@ -446,11 +455,15 @@ def _tab_badges(gs, badge_engine):
                 bemoji = b["emoji"]
                 st.markdown(
                     f'<div title="달성! {bdesc}" style="'
-                    f'background:rgba(255,215,0,.12);border:2px solid rgba(255,215,0,.4);'
-                    f'border-radius:16px;padding:14px 8px;text-align:center;cursor:default;">'
-                    f'<div style="font-size:2rem;">{bemoji}</div>'
-                    f'<div style="font-size:.78rem;font-weight:700;color:#fde68a;margin-top:6px;">{bname}</div>'
-                    f'<div style="font-size:.68rem;color:rgba(255,255,255,.45);margin-top:3px;">{bdesc}</div>'
+                    f'background:linear-gradient(135deg,rgba(255,214,10,.2),rgba(255,107,107,.12));'
+                    f'border:2px solid rgba(255,214,10,.5);'
+                    f'border-top:3px solid rgba(255,214,10,.8);'
+                    f'border-radius:24px;padding:18px 8px;text-align:center;cursor:default;'
+                    f'box-shadow:0 6px 24px rgba(255,214,10,.2);'
+                    f'transition:all .25s ease;">'
+                    f'<div style="font-size:2.4rem;filter:drop-shadow(0 0 8px rgba(255,214,10,.6));">{bemoji}</div>'
+                    f'<div style="font-size:.8rem;font-weight:900;color:#FFE566;margin-top:8px;">{bname}</div>'
+                    f'<div style="font-size:.7rem;color:rgba(255,255,255,.55);margin-top:4px;">{bdesc}</div>'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
@@ -469,15 +482,15 @@ def _tab_badges(gs, badge_engine):
             with cols[i % 4]:
                 st.markdown(
                     f'<div title="{how}" style="'
-                    f'background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);'
-                    f'border-radius:16px;padding:14px 8px;text-align:center;cursor:default;'
-                    f'filter:grayscale(80%);opacity:.7;">'
-                    f'<div style="font-size:2rem;">{b["emoji"]}</div>'
-                    f'<div style="font-size:.78rem;font-weight:700;color:rgba(255,255,255,.6);margin-top:6px;">{b["name"]}</div>'
-                    f'<div style="font-size:.68rem;color:rgba(255,255,255,.35);margin-top:3px;">{how}</div>'
-                    f'<div style="background:rgba(255,255,255,.1);border-radius:4px;margin-top:8px;height:4px;">'
-                    f'<div style="background:#a78bfa;width:{pct*100:.0f}%;height:4px;border-radius:4px;"></div></div>'
-                    f'<div style="font-size:.62rem;color:rgba(255,255,255,.3);margin-top:3px;">{current:.0f} / {b["threshold"]}</div>'
+                    f'background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.12);'
+                    f'border-radius:24px;padding:18px 8px;text-align:center;cursor:default;'
+                    f'filter:grayscale(60%);opacity:.6;">'
+                    f'<div style="font-size:2.2rem;">{b["emoji"]}</div>'
+                    f'<div style="font-size:.78rem;font-weight:800;color:rgba(255,255,255,.65);margin-top:8px;">{b["name"]}</div>'
+                    f'<div style="font-size:.68rem;color:rgba(255,255,255,.38);margin-top:4px;">{how}</div>'
+                    f'<div style="background:rgba(255,255,255,.1);border-radius:100px;margin-top:10px;height:5px;">'
+                    f'<div style="background:linear-gradient(90deg,#845EF7,#5AB4FF);width:{pct*100:.0f}%;height:5px;border-radius:100px;"></div></div>'
+                    f'<div style="font-size:.63rem;color:rgba(255,255,255,.35);margin-top:4px;">{current:.0f} / {b["threshold"]}</div>'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
@@ -511,16 +524,19 @@ def _tab_products(gs, concepts: list, generator):
     # ── 자산 증여 상담 챗봇 ───────────────────────────────────────────────────
     st.markdown(
         """
-        <div style="margin:4px 0 20px;text-align:center;">
-          <div style="display:inline-block;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.3);
-                      border-radius:100px;padding:5px 16px;color:#a855f7;font-size:.76rem;font-weight:700;
-                      letter-spacing:1.2px;margin-bottom:14px;">✦ 부모님 전용 ✦</div>
-          <div style="font-size:2.2rem;margin-bottom:8px;">💸</div>
-          <h3 style="font-size:1.35rem;font-weight:900;letter-spacing:-.4px;margin:0 0 8px;">
+        <div style="margin:4px 0 24px;text-align:center;">
+          <div style="display:inline-flex;align-items:center;gap:6px;
+                      background:linear-gradient(135deg,rgba(132,94,247,.25),rgba(90,180,255,.2));
+                      border:2px solid rgba(132,94,247,.45);
+                      border-radius:100px;padding:7px 20px;color:#C4AAFF;font-size:.8rem;font-weight:900;
+                      letter-spacing:.8px;margin-bottom:16px;
+                      box-shadow:0 4px 16px rgba(132,94,247,.25);">✦ 부모님 전용 ✦</div>
+          <div style="font-size:3rem;margin-bottom:10px;filter:drop-shadow(0 0 12px rgba(132,94,247,.5));">💸</div>
+          <h3 style="font-size:1.5rem;font-weight:900;letter-spacing:-.5px;margin:0 0 10px;color:white;">
             자산 증여 상담 챗봇
           </h3>
-          <p style="font-size:.9rem;color:#6b7280;margin:0;">
-            자녀에게 자산을 증여할 때 궁금한 점을 편하게 물어보세요
+          <p style="font-size:.92rem;color:rgba(255,255,255,.6);margin:0;">
+            자녀에게 자산을 증여할 때 궁금한 점을 편하게 물어보세요 😊
           </p>
         </div>
         """,
@@ -561,15 +577,23 @@ def _tab_products(gs, concepts: list, generator):
     for msg in chat_history:
         is_user = msg["role"] == "user"
         if is_user:
-            bubble_style = "background:#eff6ff;border:1px solid #bfdbfe;margin-left:auto;text-align:right;"
-            icon, text_color = "👤", "#1e40af"
+            bubble_style = (
+                "background:linear-gradient(135deg,rgba(0,68,204,.4),rgba(0,104,255,.3));"
+                "border:2px solid rgba(90,180,255,.4);margin-left:auto;text-align:right;"
+                "box-shadow:0 4px 16px rgba(0,68,204,.25);"
+            )
+            icon, text_color = "👤", "white"
         else:
-            bubble_style = "background:#f5f3ff;border:1px solid #ddd6fe;"
-            icon, text_color = "🤖", "#5b21b6"
+            bubble_style = (
+                "background:rgba(255,255,255,.1);"
+                "border:2px solid rgba(132,94,247,.35);border-top:2px solid rgba(132,94,247,.6);"
+                "box-shadow:0 4px 16px rgba(132,94,247,.2);"
+            )
+            icon, text_color = "🤖", "white"
         st.markdown(
-            f'<div style="{bubble_style}border-radius:18px;padding:12px 16px;'
-            f'margin-bottom:10px;max-width:85%;font-size:.9rem;'
-            f'color:{text_color};line-height:1.7;">'
+            f'<div style="{bubble_style}backdrop-filter:blur(16px);border-radius:20px;padding:14px 18px;'
+            f'margin-bottom:12px;max-width:88%;font-size:.92rem;'
+            f'color:{text_color};line-height:1.75;">'
             f'<span style="font-size:.75rem;opacity:.6;">{icon}</span><br>'
             f'{msg["content"].replace(chr(10), "<br>")}</div>',
             unsafe_allow_html=True,
@@ -668,9 +692,13 @@ def _tab_products(gs, concepts: list, generator):
 
     report_md = st.session_state[cache_key]
     st.markdown(
-        f"""<div style="background:#f0fdf4;border-left:4px solid #22c55e;
-            border-radius:10px;padding:14px 18px;margin-bottom:12px;
-            font-size:0.95rem;line-height:1.7;color:#1a3a1a;">
+        f"""<div style="background:rgba(6,214,160,.12);
+            border:2px solid rgba(6,214,160,.35);border-top:3px solid rgba(6,214,160,.7);
+            border-radius:24px;padding:20px 22px;margin-bottom:14px;
+            font-size:0.95rem;line-height:1.8;color:white;
+            box-shadow:0 6px 24px rgba(6,214,160,.2);">
+            <div style="font-size:.78rem;font-weight:900;color:rgba(6,214,160,.9);
+                letter-spacing:.5px;margin-bottom:10px;">🤖 AI 맞춤 리포트</div>
             {report_md.replace(chr(10),'<br>')}
         </div>""",
         unsafe_allow_html=True,
@@ -687,19 +715,28 @@ def _tab_products(gs, concepts: list, generator):
     for col, prod in zip([p1, p2], _PRODUCT_CARDS):
         with col:
             r, g, b = tuple(int(prod["color"].lstrip("#")[i:i+2], 16) for i in (0, 2, 4))
-            feats_html = "".join(f"<li style='margin:4px 0;'>{f}</li>" for f in prod["features"])
+            feats_html = "".join(
+                f"<li style='margin:6px 0;color:rgba(255,255,255,.82);font-size:.88rem;'>{f}</li>"
+                for f in prod["features"]
+            )
             st.markdown(
-                f"""<div style="border:2px solid {prod['color']};border-radius:16px;
-                    padding:18px;background:rgba({r},{g},{b},0.06);height:100%;">
-                    <div style="font-size:2rem;text-align:center;">{prod['emoji']}</div>
-                    <div style="font-size:1.05rem;font-weight:700;text-align:center;
-                        margin:8px 0 4px;color:{prod['color']};">{prod['name']}</div>
-                    <div style="font-size:0.82rem;color:#6b7280;text-align:center;
-                        margin-bottom:12px;">{prod['type']}</div>
-                    <ul style="font-size:0.88rem;color:#374151;padding-left:18px;margin:0;">
+                f"""<div style="border:2px solid rgba({r},{g},{b},.45);
+                    border-top:3px solid rgba({r},{g},{b},.8);
+                    border-radius:28px;padding:22px;
+                    background:rgba({r},{g},{b},0.12);
+                    backdrop-filter:blur(20px);height:100%;
+                    box-shadow:0 8px 32px rgba({r},{g},{b},.2);">
+                    <div style="font-size:2.8rem;text-align:center;
+                        filter:drop-shadow(0 0 10px rgba({r},{g},{b},.6));margin-bottom:10px;">{prod['emoji']}</div>
+                    <div style="font-size:1.08rem;font-weight:900;text-align:center;
+                        margin:0 0 4px;color:{prod['color']};letter-spacing:-.3px;">{prod['name']}</div>
+                    <div style="font-size:.82rem;color:rgba(255,255,255,.5);text-align:center;
+                        margin-bottom:14px;font-weight:700;">{prod['type']}</div>
+                    <ul style="padding-left:18px;margin:0 0 12px;">
                         {feats_html}
                     </ul>
-                    <div style="font-size:0.72rem;color:#9ca3af;margin-top:12px;">
+                    <div style="font-size:.7rem;color:rgba(255,255,255,.35);margin-top:10px;
+                        border-top:1px solid rgba(255,255,255,.1);padding-top:10px;">
                         {prod['note']}
                     </div>
                 </div>""",
@@ -716,6 +753,17 @@ def _tab_products(gs, concepts: list, generator):
 # ── Public entry point ────────────────────────────────────────────────────────
 
 def render_parent_report(gs, scenario_generator, badge_engine, recommender=None):
+    st.markdown(
+        """
+        <style>
+        @keyframes bounce { 0%,100%{transform:translateY(0) scale(1)} 40%{transform:translateY(-16px) scale(1.05)} 60%{transform:translateY(-6px) scale(1.02)} }
+        @keyframes floatY { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
     missions  = _load_missions()
     concepts  = _get_learned_concepts(gs, missions)
     history   = st.session_state.get("_answer_history", [])

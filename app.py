@@ -108,76 +108,102 @@ def inject_css(world_id: str = "space"):
     st.markdown(
         f"""
         <style>
-        @keyframes floatY  {{ 0%,100%{{transform:translateY(0)}} 50%{{transform:translateY(-10px)}} }}
-        @keyframes fadeUp  {{ from{{opacity:0;transform:translateY(24px)}} to{{opacity:1;transform:translateY(0)}} }}
-        @keyframes popIn   {{ from{{opacity:0;transform:scale(.88)}} to{{opacity:1;transform:scale(1)}} }}
-        @keyframes glow    {{ 0%,100%{{opacity:.7}} 50%{{opacity:1}} }}
-        @keyframes shimmer {{ 0%{{background-position:200% center}} 100%{{background-position:-200% center}} }}
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+
+        /* ── Animations ── */
+        @keyframes floatY   {{ 0%,100%{{transform:translateY(0)}} 50%{{transform:translateY(-12px)}} }}
+        @keyframes fadeUp   {{ from{{opacity:0;transform:translateY(28px)}} to{{opacity:1;transform:translateY(0)}} }}
+        @keyframes popIn    {{ from{{opacity:0;transform:scale(.82)}} to{{opacity:1;transform:scale(1)}} }}
+        @keyframes bounce   {{ 0%,100%{{transform:translateY(0) scale(1)}} 40%{{transform:translateY(-16px) scale(1.05)}} 60%{{transform:translateY(-6px) scale(1.02)}} }}
+        @keyframes wiggle   {{ 0%,100%{{transform:rotate(0deg)}} 25%{{transform:rotate(-6deg)}} 75%{{transform:rotate(6deg)}} }}
+        @keyframes sparkle  {{ 0%,100%{{opacity:.6;transform:scale(1)}} 50%{{opacity:1;transform:scale(1.3)}} }}
+        @keyframes shimmer  {{ 0%{{background-position:200% center}} 100%{{background-position:-200% center}} }}
+        @keyframes starFloat {{ 0%{{transform:translateY(0) rotate(0deg);opacity:.7}} 50%{{transform:translateY(-20px) rotate(180deg);opacity:1}} 100%{{transform:translateY(0) rotate(360deg);opacity:.7}} }}
+        @keyframes pulse    {{ 0%,100%{{box-shadow:0 0 0 0 rgba({r},{g},{b},.5)}} 70%{{box-shadow:0 0 0 14px transparent}} }}
 
         header[data-testid="stHeader"], footer {{ display:none !important; }}
         #MainMenu {{ visibility:hidden !important; }}
         section[data-testid="stSidebar"] {{ display:none !important; }}
 
-        /* ── Background ── */
+        /* ── Background — Vibrant Shinhan Blue ── */
         .stApp, section[data-testid="stMain"], section[data-testid="stMain"] > div, .main > div {{
-            background: linear-gradient(150deg, #00112e 0%, #001a5c 30%, #003082 65%, #0057c2 100%) !important;
+            background: linear-gradient(160deg, #001F8C 0%, #0044CC 28%, #0068FF 58%, #1E8FFF 80%, #55B8FF 100%) !important;
+            font-family: 'Nunito', 'Apple SD Gothic Neo', sans-serif !important;
+        }}
+        /* Decorative orbs */
+        .stApp::before {{
+            content:''; position:fixed; top:-160px; right:-100px;
+            width:520px; height:520px; border-radius:50%;
+            background:radial-gradient(circle, rgba(255,100,100,.2) 0%, transparent 65%);
+            pointer-events:none; z-index:0;
+        }}
+        .stApp::after {{
+            content:''; position:fixed; bottom:-120px; left:-80px;
+            width:420px; height:420px; border-radius:50%;
+            background:radial-gradient(circle, rgba(255,210,0,.18) 0%, transparent 65%);
+            pointer-events:none; z-index:0;
         }}
         .block-container {{
             background: transparent !important;
-            max-width: 900px !important;
+            max-width: 920px !important;
             padding-top: 1.2rem !important;
         }}
 
-        /* ── Buttons (default = glass pill) ── */
+        /* ── Buttons ── */
         .stButton > button {{
-            border-radius: 100px !important;
-            font-weight: 700 !important;
-            font-size: .93rem !important;
-            letter-spacing: .1px !important;
-            transition: all .22s cubic-bezier(.34,1.56,.64,1) !important;
-            color: rgba(255,255,255,.92) !important;
-            background: rgba(255,255,255,.1) !important;
-            backdrop-filter: blur(12px) !important;
-            -webkit-backdrop-filter: blur(12px) !important;
-            border: 1px solid rgba(255,255,255,.22) !important;
-            padding: 11px 26px !important;
-            box-shadow: 0 2px 14px rgba(0,0,0,.22),
-                        inset 0 1px 0 rgba(255,255,255,.15) !important;
+            border-radius: 20px !important;
+            font-weight: 800 !important;
+            font-size: .95rem !important;
+            letter-spacing: .2px !important;
+            transition: all .25s cubic-bezier(.34,1.56,.64,1) !important;
+            color: white !important;
+            background: rgba(255,255,255,.15) !important;
+            backdrop-filter: blur(16px) !important;
+            -webkit-backdrop-filter: blur(16px) !important;
+            border: 2px solid rgba(255,255,255,.3) !important;
+            padding: 12px 28px !important;
+            box-shadow: 0 4px 20px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.25) !important;
         }}
         .stButton > button:hover {{
-            background: rgba(255,255,255,.18) !important;
-            border-color: rgba(255,255,255,.38) !important;
+            background: rgba(255,255,255,.25) !important;
+            border-color: rgba(255,255,255,.5) !important;
             color: white !important;
-            transform: translateY(-2px) scale(1.02) !important;
-            box-shadow: 0 8px 28px rgba(0,0,0,.3),
-                        inset 0 1px 0 rgba(255,255,255,.22) !important;
+            transform: translateY(-3px) scale(1.04) !important;
+            box-shadow: 0 12px 32px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.3) !important;
+        }}
+        .stButton > button:active {{
+            transform: translateY(0) scale(.98) !important;
         }}
         .stButton > button[kind="primary"] {{
-            background: linear-gradient(135deg, #4361ee 0%, #0057c2 100%) !important;
+            background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%) !important;
             color: white !important;
             border: none !important;
-            box-shadow: 0 4px 20px rgba(67,97,238,.55) !important;
+            box-shadow: 0 6px 24px rgba(255,107,107,.55), inset 0 1px 0 rgba(255,255,255,.25) !important;
         }}
         .stButton > button[kind="primary"]:hover {{
-            background: linear-gradient(135deg, #3651d4 0%, #0047a8 100%) !important;
-            box-shadow: 0 8px 32px rgba(67,97,238,.72) !important;
-            transform: translateY(-3px) scale(1.02) !important;
+            background: linear-gradient(135deg, #FF5252 0%, #FF7043 100%) !important;
+            box-shadow: 0 10px 36px rgba(255,107,107,.7) !important;
+            transform: translateY(-4px) scale(1.04) !important;
         }}
 
-        /* ── Glass card base ── */
+        /* ── Glass card ── */
         .glass-card {{
-            background: rgba(255,255,255,.06);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border: 1px solid rgba(255,255,255,.13);
-            border-radius: 24px;
-            box-shadow: 0 8px 32px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.08);
+            background: rgba(255,255,255,.1);
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+            border: 2px solid rgba(255,255,255,.22);
+            border-top: 3px solid rgba(255,255,255,.45);
+            border-radius: 28px;
+            box-shadow: 0 12px 40px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.15);
         }}
 
         /* ── Progress bar ── */
-        div[data-testid="stProgress"] > div {{ background-color: {color}; border-radius: 100px; }}
+        div[data-testid="stProgress"] > div {{
+            background: linear-gradient(90deg, #FF6B6B, {color}, #FFD60A);
+            border-radius: 100px;
+        }}
 
-        /* ── White text on blue bg ── */
+        /* ── Text ── */
         div[data-testid="stMarkdownContainer"] p,
         div[data-testid="stMarkdownContainer"] h1,
         div[data-testid="stMarkdownContainer"] h2,
@@ -188,22 +214,15 @@ def inject_css(world_id: str = "space"):
         div[data-testid="stMarkdownContainer"] a,
         div[data-testid="stCaptionContainer"] p,
         div[data-testid="stText"] p,
-        label[data-testid="stWidgetLabel"] p {{
-            color: white !important;
-        }}
-        /* ── 버튼 글씨 강제 지정 ── */
+        label[data-testid="stWidgetLabel"] p {{ color: white !important; }}
         [data-testid="stButton"] p,
         [data-testid="stButton"] span,
         [data-testid="stButton"] [data-testid="stMarkdownContainer"] p,
-        [data-testid="stButton"] [data-testid="stMarkdownContainer"] span {{ color: rgba(255,255,255,.92) !important; }}
-        [data-testid="stButton"] button[kind="primary"] p,
-        [data-testid="stButton"] button[kind="primary"] span,
-        [data-testid="stButton"] button[kind="primary"] [data-testid="stMarkdownContainer"] p,
-        [data-testid="stButton"] button[kind="primary"] [data-testid="stMarkdownContainer"] span {{ color: white !important; }}
+        [data-testid="stButton"] [data-testid="stMarkdownContainer"] span {{ color: white !important; }}
         div[data-testid="stSpinner"] p, div[data-testid="stSpinner"] span {{ color: white !important; }}
-        hr {{ border-color: rgba(255,255,255,.1) !important; margin: 1.2rem 0 !important; }}
+        hr {{ border-color: rgba(255,255,255,.15) !important; margin: 1.2rem 0 !important; }}
 
-        /* ── Tooltip (말풍선) — 흰 배경에 어두운 글씨 ── */
+        /* ── Tooltip ── */
         [data-testid="tooltipContent"],
         [data-testid="tooltipContent"] p,
         [data-testid="tooltipContent"] span,
@@ -211,42 +230,70 @@ def inject_css(world_id: str = "space"):
         div[role="tooltip"] p,
         div[role="tooltip"] span {{ color: #0d1b3e !important; background: white; }}
 
-        /* ── Shinhan logo button ── */
+        /* ── Top nav — logo button ── */
         div:has(#top-nav-sentinel) ~ [data-testid="stHorizontalBlock"] > div:first-child [data-testid="stButton"] {{
             margin-top: 0 !important; z-index: auto !important;
         }}
         div:has(#top-nav-sentinel) ~ [data-testid="stHorizontalBlock"] > div:first-child [data-testid="stButton"] button {{
-            display: inline-flex !important; align-items: center !important; gap: 9px !important;
-            background: rgba(255,255,255,.1) !important;
-            backdrop-filter: blur(20px) !important;
-            -webkit-backdrop-filter: blur(20px) !important;
-            border: 1px solid rgba(255,255,255,.22) !important;
-            border-radius: 100px !important; padding: 8px 18px 8px 8px !important;
-            color: white !important; font-weight: 800 !important; font-size: 13.5px !important;
-            letter-spacing: -.1px !important; box-shadow: none !important;
+            display: inline-flex !important; align-items: center !important; gap: 8px !important;
+            background: white !important;
+            border: none !important;
+            border-radius: 100px !important; padding: 7px 18px 7px 7px !important;
+            color: #003082 !important; font-weight: 900 !important; font-size: 13px !important;
+            box-shadow: 0 4px 16px rgba(0,0,0,.18) !important;
         }}
         div:has(#top-nav-sentinel) ~ [data-testid="stHorizontalBlock"] > div:first-child [data-testid="stButton"] button::before {{
             content: "신";
             display: inline-flex; align-items: center; justify-content: center;
             width: 28px; height: 28px; min-width: 28px;
-            background: white; border-radius: 50%;
-            font-size: 12px; font-weight: 900; color: #003082; flex-shrink: 0;
+            background: linear-gradient(135deg, #0044CC, #0068FF); border-radius: 50%;
+            font-size: 12px; font-weight: 900; color: white; flex-shrink: 0;
         }}
         div:has(#top-nav-sentinel) ~ [data-testid="stHorizontalBlock"] > div:first-child [data-testid="stButton"] button:hover {{
-            background: rgba(255,255,255,.18) !important; transform: none !important;
+            transform: translateY(-2px) !important; box-shadow: 0 8px 24px rgba(0,0,0,.25) !important;
         }}
-        /* ── Icon nav buttons (word/allow/save/prod) ── */
+        div:has(#top-nav-sentinel) ~ [data-testid="stHorizontalBlock"] > div:first-child [data-testid="stButton"] p,
+        div:has(#top-nav-sentinel) ~ [data-testid="stHorizontalBlock"] > div:first-child [data-testid="stButton"] span {{
+            color: #003082 !important;
+        }}
+        /* ── Nav icon buttons ── */
         div:has(#top-nav-sentinel) button[data-testid="stBaseButton-secondary"] {{
-            background: rgba(255,255,255,.1) !important;
+            background: rgba(255,255,255,.15) !important;
             backdrop-filter: blur(12px) !important;
-            -webkit-backdrop-filter: blur(12px) !important;
-            border: 1px solid rgba(255,255,255,.22) !important;
-            color: white !important;
-            box-shadow: none !important;
+            border: 2px solid rgba(255,255,255,.28) !important;
+            border-radius: 16px !important;
+            color: white !important; font-size: 1.1rem !important;
+            box-shadow: 0 2px 10px rgba(0,0,0,.12) !important;
         }}
         div:has(#top-nav-sentinel) button[data-testid="stBaseButton-secondary"]:hover {{
-            background: rgba(255,255,255,.18) !important;
-            transform: none !important;
+            background: rgba(255,255,255,.25) !important;
+            transform: translateY(-2px) scale(1.08) !important;
+            box-shadow: 0 6px 20px rgba(0,0,0,.2) !important;
+        }}
+
+        /* ── Input fields ── */
+        .stTextInput input, .stSelectbox select {{
+            background: rgba(255,255,255,.12) !important;
+            border: 2px solid rgba(255,255,255,.28) !important;
+            border-radius: 16px !important;
+            color: white !important;
+            font-size: 1rem !important;
+        }}
+        .stTextInput input::placeholder {{ color: rgba(255,255,255,.5) !important; }}
+
+        /* ── Tabs ── */
+        button[data-baseweb="tab"] {{
+            background: rgba(255,255,255,.1) !important;
+            border-radius: 16px 16px 0 0 !important;
+            color: rgba(255,255,255,.7) !important;
+            font-weight: 700 !important;
+            border: none !important;
+            font-size: .92rem !important;
+        }}
+        button[data-baseweb="tab"][aria-selected="true"] {{
+            background: rgba(255,255,255,.22) !important;
+            color: white !important;
+            border-bottom: 3px solid #FFD60A !important;
         }}
         </style>
         """,
@@ -477,134 +524,145 @@ def _inject_intro_css():
     st.markdown(
         """
         <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+
         header[data-testid="stHeader"], footer { display:none !important; }
         #MainMenu { visibility:hidden !important; }
         section[data-testid="stSidebar"] { display:none !important; }
 
-        /* ── Background ── */
+        /* ── Background — Vibrant Shinhan Blue ── */
         .stApp, section[data-testid="stMain"], section[data-testid="stMain"] > div, .main > div {
-            background: linear-gradient(150deg, #00112e 0%, #001a5c 30%, #003082 65%, #0057c2 100%) !important;
+            background: linear-gradient(160deg, #001F8C 0%, #0044CC 28%, #0068FF 58%, #1E8FFF 80%, #55B8FF 100%) !important;
+            font-family: 'Nunito', 'Apple SD Gothic Neo', sans-serif !important;
         }
-        .block-container { background:transparent !important; max-width:900px !important; padding-top:0 !important; }
+        .block-container { background:transparent !important; max-width:920px !important; padding-top:0 !important; }
 
-        /* ── Ambient orbs ── */
+        /* ── Decorative orbs ── */
         .stApp::before {
-            content:''; position:fixed; top:-200px; right:-100px;
-            width:500px; height:500px; border-radius:50%;
-            background:radial-gradient(circle,rgba(99,102,241,.18) 0%,transparent 70%);
+            content:''; position:fixed; top:-160px; right:-100px;
+            width:520px; height:520px; border-radius:50%;
+            background:radial-gradient(circle,rgba(255,100,100,.2) 0%,transparent 65%);
             pointer-events:none; z-index:0;
         }
         .stApp::after {
-            content:''; position:fixed; bottom:-150px; left:-80px;
-            width:400px; height:400px; border-radius:50%;
-            background:radial-gradient(circle,rgba(0,87,194,.22) 0%,transparent 70%);
+            content:''; position:fixed; bottom:-120px; left:-80px;
+            width:420px; height:420px; border-radius:50%;
+            background:radial-gradient(circle,rgba(255,210,0,.18) 0%,transparent 65%);
             pointer-events:none; z-index:0;
         }
 
         /* ── Animations ── */
-        @keyframes floatY    { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-14px)} }
-        @keyframes fadeUp    { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes fadeIn    { from{opacity:0} to{opacity:1} }
-        @keyframes bounce    { 0%,100%{transform:translateY(0)} 40%{transform:translateY(-18px)} 60%{transform:translateY(-7px)} }
-        @keyframes popIn     { from{opacity:0;transform:scale(.82)} to{opacity:1;transform:scale(1)} }
-        @keyframes glow      { 0%,100%{filter:drop-shadow(0 0 8px rgba(255,255,255,.3))} 50%{filter:drop-shadow(0 0 22px rgba(255,255,255,.7))} }
-        @keyframes dotPulse  { 0%,100%{transform:scale(1)} 50%{transform:scale(1.4)} }
+        @keyframes floatY   { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-14px)} }
+        @keyframes fadeUp   { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes fadeIn   { from{opacity:0} to{opacity:1} }
+        @keyframes bounce   { 0%,100%{transform:translateY(0) scale(1)} 40%{transform:translateY(-20px) scale(1.06)} 60%{transform:translateY(-8px) scale(1.02)} }
+        @keyframes popIn    { from{opacity:0;transform:scale(.78)} to{opacity:1;transform:scale(1)} }
+        @keyframes wiggle   { 0%,100%{transform:rotate(0deg)} 25%{transform:rotate(-8deg)} 75%{transform:rotate(8deg)} }
+        @keyframes glow     { 0%,100%{filter:drop-shadow(0 0 8px rgba(255,255,255,.3))} 50%{filter:drop-shadow(0 0 24px rgba(255,255,255,.8))} }
+        @keyframes dotPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.5)} }
+        @keyframes sparkle  { 0%,100%{opacity:.5;transform:scale(.8) rotate(0deg)} 50%{opacity:1;transform:scale(1.2) rotate(180deg)} }
+        @keyframes rainbow  { 0%{color:#FF6B6B} 20%{color:#FFD60A} 40%{color:#06D6A0} 60%{color:#5AB4FF} 80%{color:#845EF7} 100%{color:#FF6B6B} }
 
         /* ── Glass card ── */
         .fq-card {
-            background: rgba(255,255,255,.06);
-            backdrop-filter: blur(28px);
-            -webkit-backdrop-filter: blur(28px);
-            border: 1px solid rgba(255,255,255,.14);
-            border-radius: 28px;
+            background: rgba(255,255,255,.1);
+            backdrop-filter: blur(32px);
+            -webkit-backdrop-filter: blur(32px);
+            border: 2px solid rgba(255,255,255,.22);
+            border-top: 3px solid rgba(255,255,255,.5);
+            border-radius: 32px;
             padding: 36px 16px 28px;
             text-align: center;
-            transition: all .3s cubic-bezier(.34,1.56,.64,1);
+            transition: all .32s cubic-bezier(.34,1.56,.64,1);
             margin-bottom: 8px;
             position: relative;
             overflow: hidden;
-            box-shadow: 0 8px 32px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.08);
+            box-shadow: 0 12px 40px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.18);
         }
-        .fq-card::before {
+        .fq-card::after {
             content: '';
-            position: absolute; top: 0; left: 0; right: 0; height: 1px;
-            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.28) 50%, transparent 100%);
+            position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, rgba(255,107,107,.6) 0%, rgba(255,214,10,.6) 50%, rgba(6,214,160,.6) 100%);
+            border-radius: 32px 32px 0 0;
+            opacity: 0;
+            transition: opacity .3s;
         }
         .fq-card:hover {
-            background: rgba(255,255,255,.12);
-            border-color: rgba(255,255,255,.32);
-            transform: translateY(-12px) scale(1.03);
-            box-shadow: 0 32px 64px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.15);
+            background: rgba(255,255,255,.18);
+            border-color: rgba(255,255,255,.4);
+            transform: translateY(-14px) scale(1.04);
+            box-shadow: 0 36px 72px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.25);
         }
+        .fq-card:hover::after { opacity: 1; }
+
+        /* ── Colored card variants ── */
+        .fq-card-coral  { border-top-color: rgba(255,107,107,.8) !important; }
+        .fq-card-yellow { border-top-color: rgba(255,214,10,.8) !important; }
+        .fq-card-green  { border-top-color: rgba(6,214,160,.8) !important; }
+        .fq-card-purple { border-top-color: rgba(132,94,247,.8) !important; }
 
         /* ── Speech bubble ── */
         .fq-bubble {
-            background: rgba(255,255,255,.07);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255,255,255,.16);
-            border-radius: 24px;
+            background: rgba(255,255,255,.1);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 2px solid rgba(255,255,255,.22);
+            border-top: 2px solid rgba(255,255,255,.45);
+            border-radius: 28px;
             padding: 24px 28px;
             margin: 18px auto 22px;
-            max-width: 600px;
+            max-width: 620px;
             text-align: left;
             animation: fadeUp .55s cubic-bezier(.34,1.56,.64,1);
-            box-shadow: 0 12px 40px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.08);
-            position: relative;
-        }
-        .fq-bubble::before {
-            content: '';
-            position: absolute; top: 0; left: 0; right: 0; height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,.24), transparent);
-            border-radius: 24px 24px 0 0;
+            box-shadow: 0 14px 48px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.15);
         }
 
         /* ── Progress dots ── */
         .fq-dots { text-align:center; margin:10px 0 0; display:flex; align-items:center; justify-content:center; gap:8px; }
         .fq-dot  {
-            display:inline-block; width:8px; height:8px; border-radius:50%;
-            background:rgba(255,255,255,.22); transition:all .3s cubic-bezier(.34,1.56,.64,1);
+            display:inline-block; width:9px; height:9px; border-radius:50%;
+            background:rgba(255,255,255,.25); transition:all .35s cubic-bezier(.34,1.56,.64,1);
         }
         .fq-dot.active {
-            background:white; width:24px; border-radius:100px;
-            box-shadow: 0 0 12px rgba(255,255,255,.6);
+            background: linear-gradient(90deg, #FFD60A, #FF6B6B);
+            width: 28px; border-radius: 100px;
+            box-shadow: 0 0 14px rgba(255,214,10,.6);
             animation: dotPulse 2s ease-in-out infinite;
         }
 
-        /* ── Buttons (glass pill) ── */
+        /* ── Buttons ── */
         .stButton > button {
-            border-radius: 100px !important;
-            font-weight: 700 !important;
-            font-size: .93rem !important;
-            letter-spacing: .1px !important;
-            transition: all .22s cubic-bezier(.34,1.56,.64,1) !important;
-            color: rgba(255,255,255,.92) !important;
-            background: rgba(255,255,255,.1) !important;
-            backdrop-filter: blur(12px) !important;
-            -webkit-backdrop-filter: blur(12px) !important;
-            border: 1px solid rgba(255,255,255,.22) !important;
-            padding: 11px 26px !important;
-            box-shadow: 0 2px 14px rgba(0,0,0,.22),
-                        inset 0 1px 0 rgba(255,255,255,.15) !important;
+            border-radius: 20px !important;
+            font-weight: 800 !important;
+            font-size: .95rem !important;
+            letter-spacing: .2px !important;
+            transition: all .26s cubic-bezier(.34,1.56,.64,1) !important;
+            color: white !important;
+            background: rgba(255,255,255,.15) !important;
+            backdrop-filter: blur(16px) !important;
+            -webkit-backdrop-filter: blur(16px) !important;
+            border: 2px solid rgba(255,255,255,.3) !important;
+            padding: 12px 28px !important;
+            box-shadow: 0 4px 20px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.25) !important;
         }
         .stButton > button:hover {
-            background: rgba(255,255,255,.18) !important;
-            border-color: rgba(255,255,255,.38) !important;
+            background: rgba(255,255,255,.25) !important;
+            border-color: rgba(255,255,255,.5) !important;
             color: white !important;
-            transform: translateY(-2px) scale(1.02) !important;
-            box-shadow: 0 8px 28px rgba(0,0,0,.3),
-                        inset 0 1px 0 rgba(255,255,255,.22) !important;
+            transform: translateY(-3px) scale(1.05) !important;
+            box-shadow: 0 12px 32px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.3) !important;
         }
+        .stButton > button:active { transform: translateY(0) scale(.97) !important; }
         .stButton > button[kind="primary"] {
-            background: linear-gradient(135deg, #4361ee 0%, #0057c2 100%) !important;
+            background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%) !important;
             color: white !important;
             border: none !important;
-            box-shadow: 0 4px 20px rgba(67,97,238,.55) !important;
+            box-shadow: 0 6px 24px rgba(255,107,107,.55), inset 0 1px 0 rgba(255,255,255,.25) !important;
         }
         .stButton > button[kind="primary"]:hover {
-            background: linear-gradient(135deg, #3651d4 0%, #0047a8 100%) !important;
-            box-shadow: 0 8px 32px rgba(67,97,238,.72) !important;
-            transform: translateY(-3px) scale(1.02) !important;
+            background: linear-gradient(135deg, #FF5252 0%, #FF7043 100%) !important;
+            box-shadow: 0 10px 36px rgba(255,107,107,.7) !important;
+            transform: translateY(-4px) scale(1.05) !important;
         }
         div[data-testid="stButton"] { margin-top:-2px !important; }
 
@@ -618,7 +676,7 @@ def _inject_intro_css():
             min-height: 230px !important; width: 100% !important;
             opacity: 0.001 !important; cursor: pointer !important;
             background: transparent !important; border: none !important;
-            box-shadow: none !important; border-radius: 28px !important;
+            box-shadow: none !important; border-radius: 32px !important;
             transform: none !important;
         }
         div:has(#char-select-sentinel) ~ [data-testid="stHorizontalBlock"] [data-testid="stButton"] button:hover,
@@ -627,10 +685,10 @@ def _inject_intro_css():
         }
         div:has(#char-select-sentinel) ~ [data-testid="stHorizontalBlock"] [data-testid="stColumn"]:has([data-testid="stButton"] button:hover) .fq-card,
         div:has(#age-select-sentinel)  ~ [data-testid="stHorizontalBlock"] [data-testid="stColumn"]:has([data-testid="stButton"] button:hover) .fq-card {
-            background: rgba(255,255,255,.14) !important;
-            border-color: rgba(255,255,255,.38) !important;
-            transform: translateY(-12px) scale(1.03) !important;
-            box-shadow: 0 32px 64px rgba(0,0,0,.4) !important;
+            background: rgba(255,255,255,.2) !important;
+            border-color: rgba(255,255,255,.45) !important;
+            transform: translateY(-14px) scale(1.04) !important;
+            box-shadow: 0 36px 72px rgba(0,0,0,.32) !important;
         }
 
         /* ── White text ── */
@@ -645,53 +703,51 @@ def _inject_intro_css():
         div[data-testid="stCaptionContainer"] p,
         div[data-testid="stText"] p,
         label[data-testid="stWidgetLabel"] p { color: white !important; }
-        /* ── 버튼 글씨 강제 지정 ── */
         [data-testid="stButton"] p,
         [data-testid="stButton"] span,
         [data-testid="stButton"] [data-testid="stMarkdownContainer"] p,
-        [data-testid="stButton"] [data-testid="stMarkdownContainer"] span { color: rgba(255,255,255,.92) !important; }
-        [data-testid="stButton"] button[kind="primary"] p,
-        [data-testid="stButton"] button[kind="primary"] span,
-        [data-testid="stButton"] button[kind="primary"] [data-testid="stMarkdownContainer"] p,
-        [data-testid="stButton"] button[kind="primary"] [data-testid="stMarkdownContainer"] span { color: white !important; }
+        [data-testid="stButton"] [data-testid="stMarkdownContainer"] span { color: white !important; }
         div[data-testid="stSpinner"] p, div[data-testid="stSpinner"] span { color: white !important; }
-        hr { border-color: rgba(255,255,255,.1) !important; margin: 1.2rem 0 !important; }
+        hr { border-color: rgba(255,255,255,.15) !important; margin: 1.2rem 0 !important; }
 
-        /* ── Shinhan logo button (onboarding) ── */
+        /* ── Logo button ── */
         div:has(#top-nav-sentinel) ~ [data-testid="stHorizontalBlock"] > div:first-child [data-testid="stButton"] {
             margin-top: 0 !important; z-index: auto !important;
         }
         div:has(#top-nav-sentinel) ~ [data-testid="stHorizontalBlock"] > div:first-child [data-testid="stButton"] button {
-            display: inline-flex !important; align-items: center !important; gap: 9px !important;
-            background: rgba(255,255,255,.1) !important;
-            backdrop-filter: blur(20px) !important; -webkit-backdrop-filter: blur(20px) !important;
-            border: 1px solid rgba(255,255,255,.22) !important;
-            border-radius: 100px !important; padding: 8px 18px 8px 8px !important;
-            color: white !important; font-weight: 800 !important; font-size: 13.5px !important;
-            box-shadow: none !important;
+            display: inline-flex !important; align-items: center !important; gap: 8px !important;
+            background: white !important; border: none !important;
+            border-radius: 100px !important; padding: 7px 18px 7px 7px !important;
+            color: #003082 !important; font-weight: 900 !important; font-size: 13px !important;
+            box-shadow: 0 4px 16px rgba(0,0,0,.18) !important;
         }
         div:has(#top-nav-sentinel) ~ [data-testid="stHorizontalBlock"] > div:first-child [data-testid="stButton"] button::before {
             content: "신";
             display: inline-flex; align-items: center; justify-content: center;
             width: 28px; height: 28px; min-width: 28px;
-            background: white; border-radius: 50%;
-            font-size: 12px; font-weight: 900; color: #003082; flex-shrink: 0;
+            background: linear-gradient(135deg, #0044CC, #0068FF); border-radius: 50%;
+            font-size: 12px; font-weight: 900; color: white; flex-shrink: 0;
         }
         div:has(#top-nav-sentinel) ~ [data-testid="stHorizontalBlock"] > div:first-child [data-testid="stButton"] button:hover {
-            background: rgba(255,255,255,.18) !important; transform: none !important;
+            transform: translateY(-2px) !important; box-shadow: 0 8px 24px rgba(0,0,0,.25) !important;
         }
-        /* ── All other nav buttons ── */
+        div:has(#top-nav-sentinel) ~ [data-testid="stHorizontalBlock"] > div:first-child [data-testid="stButton"] p,
+        div:has(#top-nav-sentinel) ~ [data-testid="stHorizontalBlock"] > div:first-child [data-testid="stButton"] span {
+            color: #003082 !important;
+        }
+        /* ── Nav icon buttons ── */
         div:has(#top-nav-sentinel) button[data-testid="stBaseButton-secondary"] {
-            background: rgba(255,255,255,.1) !important;
+            background: rgba(255,255,255,.15) !important;
             backdrop-filter: blur(12px) !important;
-            -webkit-backdrop-filter: blur(12px) !important;
-            border: 1px solid rgba(255,255,255,.22) !important;
-            color: white !important;
-            box-shadow: none !important;
+            border: 2px solid rgba(255,255,255,.28) !important;
+            border-radius: 16px !important;
+            color: white !important; font-size: 1.05rem !important;
+            box-shadow: 0 2px 10px rgba(0,0,0,.12) !important;
         }
         div:has(#top-nav-sentinel) button[data-testid="stBaseButton-secondary"]:hover {
-            background: rgba(255,255,255,.18) !important;
-            transform: none !important;
+            background: rgba(255,255,255,.25) !important;
+            transform: translateY(-2px) scale(1.08) !important;
+            box-shadow: 0 6px 20px rgba(0,0,0,.2) !important;
         }
         </style>
         """,
@@ -780,26 +836,42 @@ def _intro_step0_name(gs: GameState):
     """Scene 0 – Shinhan splash + character selection."""
     st.markdown(
         """
-        <div style="text-align:center;padding:40px 0 12px;animation:fadeUp .7s cubic-bezier(.34,1.56,.64,1);">
-          <div style="display:inline-block;background:rgba(255,255,255,.08);backdrop-filter:blur(20px);
-                      border:1px solid rgba(255,255,255,.18);border-radius:100px;
-                      padding:6px 18px;font-size:.78rem;color:rgba(255,255,255,.7);
-                      letter-spacing:1.5px;font-weight:700;margin-bottom:20px;">
-            ✦ 신한은행 금융교육 게임 ✦
+        <div style="text-align:center;padding:44px 0 14px;animation:fadeUp .7s cubic-bezier(.34,1.56,.64,1);">
+          <div style="display:inline-flex;align-items:center;gap:6px;
+                      background:white;
+                      border-radius:100px;
+                      padding:7px 20px;font-size:.78rem;color:#003082;
+                      letter-spacing:.8px;font-weight:900;margin-bottom:22px;
+                      box-shadow:0 4px 16px rgba(0,0,0,.2);">
+            <div style="width:18px;height:18px;background:linear-gradient(135deg,#0044CC,#0068FF);
+                border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+                font-size:9px;color:white;font-weight:900;">신</div>
+            신한은행 금융교육 게임
           </div>
-          <div style="font-size:4.2rem;animation:bounce 1.3s ease-out;display:block;margin-bottom:8px;">🚀</div>
-          <h1 style="font-size:3.2rem;font-weight:900;letter-spacing:-2px;margin:0 0 10px;
-                     background:linear-gradient(135deg,#fff 0%,#a5c8ff 100%);
+          <div style="font-size:5rem;animation:bounce 1.3s ease-out;display:block;margin-bottom:10px;
+              filter:drop-shadow(0 0 20px rgba(255,214,10,.5));">🚀</div>
+          <h1 style="font-size:3.4rem;font-weight:900;letter-spacing:-2px;margin:0 0 12px;
+                     background:linear-gradient(135deg,#fff 30%,#FFD60A 70%,#FF6B6B 100%);
                      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
                      line-height:1.1;">쏠어드벤쳐</h1>
-          <p style="color:rgba(255,255,255,.72);font-size:1.08rem;margin:0;line-height:1.7;">
+          <p style="color:rgba(255,255,255,.8);font-size:1.1rem;margin:0;line-height:1.75;font-weight:700;">
             금융 지식으로 악당을 물리치는 어린이 모험! 🌟
           </p>
+          <div style="display:flex;justify-content:center;gap:8px;margin-top:14px;flex-wrap:wrap;">
+            <span style="background:rgba(255,107,107,.22);border:1.5px solid rgba(255,107,107,.5);
+                border-radius:100px;padding:4px 14px;color:#FFB3B3;font-size:.78rem;font-weight:800;">🎮 퀴즈 배틀</span>
+            <span style="background:rgba(255,214,10,.2);border:1.5px solid rgba(255,214,10,.4);
+                border-radius:100px;padding:4px 14px;color:#FFE566;font-size:.78rem;font-weight:800;">🪙 코인 수집</span>
+            <span style="background:rgba(6,214,160,.18);border:1.5px solid rgba(6,214,160,.4);
+                border-radius:100px;padding:4px 14px;color:#A8F7E5;font-size:.78rem;font-weight:800;">📚 금융 지식</span>
+          </div>
         </div>
-        <div style="text-align:center;margin:28px 0 16px;">
-          <span style="display:inline-block;background:linear-gradient(135deg,rgba(255,215,0,.2),rgba(255,215,0,.08));
-                       border:1px solid rgba(255,215,0,.35);border-radius:100px;
-                       padding:8px 20px;color:#ffd700;font-size:.92rem;font-weight:800;">
+        <div style="text-align:center;margin:24px 0 16px;">
+          <span style="display:inline-flex;align-items:center;gap:6px;
+                       background:linear-gradient(135deg,rgba(255,214,10,.25),rgba(255,107,107,.15));
+                       border:2px solid rgba(255,214,10,.5);border-radius:100px;
+                       padding:10px 24px;color:#FFE566;font-size:.95rem;font-weight:900;
+                       box-shadow:0 4px 20px rgba(255,214,10,.25);">
             🌟 나의 캐릭터를 골라봐!
           </span>
         </div>
@@ -834,15 +906,17 @@ def _intro_step0_name(gs: GameState):
     for ch in CHARACTERS:
         cards_html += (
             f'<div class="fq-card" onclick="selectChar(\'{ch["name"]}\')"'
-            f' style="cursor:pointer;background:linear-gradient(160deg,rgba(255,255,255,.09),'
-            f'rgba(255,255,255,.03));border:2px solid {ch["color"]}55;border-radius:20px;'
-            f'padding:28px 14px;text-align:center;flex:1;transition:transform .22s,box-shadow .22s;"'
-            f' onmouseover="this.style.transform=\'translateY(-6px)\';this.style.boxShadow=\'0 14px 40px rgba(0,0,0,.45)\'"'
-            f' onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\'">'
+            f' style="cursor:pointer;background:linear-gradient(160deg,rgba(255,255,255,.12),'
+            f'rgba(255,255,255,.05));border:2px solid {ch["color"]}77;border-top:3px solid {ch["color"]}CC;'
+            f'border-radius:28px;padding:30px 14px;text-align:center;flex:1;'
+            f'transition:all .3s cubic-bezier(.34,1.56,.64,1);'
+            f'box-shadow:0 6px 24px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.15);"'
+            f' onmouseover="this.style.transform=\'translateY(-10px) scale(1.04)\';this.style.boxShadow=\'0 20px 52px rgba(0,0,0,.35),0 0 28px {ch["color"]}44\'"'
+            f' onmouseout="this.style.transform=\'\';this.style.boxShadow=\'0 6px 24px rgba(0,0,0,.18)\'">'
             + _char_icon_html(ch)
-            + f'<h3 style="color:{ch["color"]};margin:0 0 6px;font-size:1.1rem;font-weight:900;letter-spacing:-.2px;">{ch["name"]}</h3>'
-            + f'<div style="width:32px;height:3px;background:{ch["color"]};border-radius:100px;margin:0 auto 10px;opacity:.7;"></div>'
-            + f'<p style="color:rgba(255,255,255,.65);font-size:.8rem;margin:0;line-height:1.6;">{ch["desc"]}</p>'
+            + f'<h3 style="color:{ch["color"]};margin:0 0 6px;font-size:1.12rem;font-weight:900;letter-spacing:-.2px;text-shadow:0 0 12px {ch["color"]}66;">{ch["name"]}</h3>'
+            + f'<div style="width:36px;height:3px;background:linear-gradient(90deg,{ch["color"]},transparent);border-radius:100px;margin:0 auto 10px;"></div>'
+            + f'<p style="color:rgba(255,255,255,.7);font-size:.82rem;margin:0;line-height:1.65;">{ch["desc"]}</p>'
             + '</div>'
         )
 
@@ -850,7 +924,7 @@ def _intro_step0_name(gs: GameState):
         f"""<!DOCTYPE html>
 <html><head>
 <style>
-  body {{ margin:0; background:transparent; font-family:'Segoe UI',sans-serif; }}
+  body {{ margin:0; background:transparent; font-family:'Nunito','Segoe UI',sans-serif; }}
   .card-row {{ display:flex; gap:14px; padding:12px 4px 10px; }}
 </style>
 </head><body>
@@ -983,18 +1057,20 @@ def _intro_step1_age(gs: GameState):
 
     age_cards_html = ""
     for i, ag in enumerate(AGE_GROUPS):
-        icon = age_icons[i] or f'<div style="font-size:3.4rem;margin-bottom:10px;">{ag["emoji"]}</div>'
+        icon = age_icons[i] or f'<div style="font-size:3.4rem;margin-bottom:10px;filter:drop-shadow(0 0 10px rgba(255,214,10,.5));">{ag["emoji"]}</div>'
         age_cards_html += (
             f'<div class="fq-card" onclick="selectAge(\'{ag["label"]}\')"'
-            f' style="cursor:pointer;background:linear-gradient(160deg,rgba(255,255,255,.09),'
-            f'rgba(255,255,255,.03));border:2px solid rgba(255,215,0,.35);border-radius:20px;'
-            f'padding:28px 14px;text-align:center;flex:1;transition:transform .22s,box-shadow .22s;"'
-            f' onmouseover="this.style.transform=\'translateY(-6px)\';this.style.boxShadow=\'0 14px 40px rgba(0,0,0,.45)\'"'
-            f' onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\'">'
+            f' style="cursor:pointer;background:linear-gradient(160deg,rgba(255,255,255,.12),'
+            f'rgba(255,255,255,.05));border:2px solid rgba(255,214,10,.45);border-top:3px solid rgba(255,214,10,.8);'
+            f'border-radius:28px;padding:30px 14px;text-align:center;flex:1;'
+            f'transition:all .3s cubic-bezier(.34,1.56,.64,1);'
+            f'box-shadow:0 6px 24px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.15);"'
+            f' onmouseover="this.style.transform=\'translateY(-10px) scale(1.04)\';this.style.boxShadow=\'0 20px 52px rgba(0,0,0,.35),0 0 28px rgba(255,214,10,.3)\'"'
+            f' onmouseout="this.style.transform=\'\';this.style.boxShadow=\'0 6px 24px rgba(0,0,0,.18)\'">'
             + icon
-            + f'<h3 style="color:#ffd700;margin:0 0 6px;font-size:1.1rem;font-weight:900;letter-spacing:-.2px;">{ag["label"]}</h3>'
-            + f'<div style="width:32px;height:3px;background:#ffd700;border-radius:100px;margin:0 auto 10px;opacity:.6;"></div>'
-            + f'<p style="color:rgba(255,255,255,.65);font-size:.8rem;margin:0;line-height:1.6;">{ag["desc"]}</p>'
+            + f'<h3 style="color:#FFE566;margin:0 0 6px;font-size:1.12rem;font-weight:900;letter-spacing:-.2px;text-shadow:0 0 12px rgba(255,214,10,.5);">{ag["label"]}</h3>'
+            + f'<div style="width:36px;height:3px;background:linear-gradient(90deg,#FFD60A,transparent);border-radius:100px;margin:0 auto 10px;"></div>'
+            + f'<p style="color:rgba(255,255,255,.7);font-size:.82rem;margin:0;line-height:1.65;">{ag["desc"]}</p>'
             + '</div>'
         )
 
@@ -1002,7 +1078,7 @@ def _intro_step1_age(gs: GameState):
         f"""<!DOCTYPE html>
 <html><head>
 <style>
-  body {{ margin:0; background:transparent; font-family:'Segoe UI',sans-serif; }}
+  body {{ margin:0; background:transparent; font-family:'Nunito','Segoe UI',sans-serif; }}
   .card-row {{ display:flex; gap:14px; padding:12px 4px 10px; }}
 </style>
 </head><body>
@@ -1073,28 +1149,29 @@ def _intro_step2_world(gs: GameState):
     for w in INTRO_WORLDS:
         c = w["color"]
         badge = (
-            f'<div style="margin:6px 0 4px"><span style="background:{c}33;color:{c};'
-            f'font-size:.68rem;padding:3px 10px;border-radius:100px;font-weight:800;'
-            f'letter-spacing:.3px;">📈 주식·투자</span></div>'
+            f'<div style="margin:8px 0 4px"><span style="background:{c}33;color:{c};'
+            f'font-size:.7rem;padding:4px 12px;border-radius:100px;font-weight:900;'
+            f'letter-spacing:.3px;border:1.5px solid {c}55;">📈 주식·투자</span></div>'
             if w["id"] == "space"
-            else '<div style="height:6px"></div>'
+            else '<div style="height:8px"></div>'
         )
         label = f'{w["emoji"]} {w["name"]}'
         world_cards_html += (
             f'<div class="fq-card" onclick="selectWorld(\'{label}\')"'
-            f' style="cursor:pointer;background:linear-gradient(160deg,rgba(255,255,255,.09),'
-            f'rgba(255,255,255,.03));border:2px solid {c}44;border-radius:20px;'
-            f'padding:22px 14px;text-align:center;display:flex;flex-direction:column;'
-            f'align-items:center;transition:transform .22s,box-shadow .22s;"'
-            f' onmouseover="this.style.transform=\'translateY(-6px)\';this.style.boxShadow=\'0 14px 40px rgba(0,0,0,.45)\'"'
-            f' onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\'">'
-            + f'<div style="font-size:3.2rem;margin-bottom:6px;">{w["emoji"]}</div>'
+            f' style="cursor:pointer;background:linear-gradient(160deg,rgba(255,255,255,.12),'
+            f'rgba(255,255,255,.05));border:2px solid {c}66;border-top:3px solid {c}CC;'
+            f'border-radius:28px;padding:24px 14px;text-align:center;display:flex;flex-direction:column;'
+            f'align-items:center;transition:all .3s cubic-bezier(.34,1.56,.64,1);'
+            f'box-shadow:0 6px 24px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.15);"'
+            f' onmouseover="this.style.transform=\'translateY(-10px) scale(1.04)\';this.style.boxShadow=\'0 20px 52px rgba(0,0,0,.35),0 0 28px {c}44\'"'
+            f' onmouseout="this.style.transform=\'\';this.style.boxShadow=\'0 6px 24px rgba(0,0,0,.18)\'">'
+            + f'<div style="font-size:3.4rem;margin-bottom:4px;filter:drop-shadow(0 0 12px {c}55);">{w["emoji"]}</div>'
             + badge
-            + f'<h3 style="color:{c};margin:0 0 6px;font-size:1.05rem;font-weight:900;letter-spacing:-.2px;">{w["name"]}</h3>'
-            + f'<div style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);'
-            f'border-radius:100px;padding:3px 10px;font-size:.72rem;color:#fca5a5;font-weight:700;margin-bottom:8px;">'
+            + f'<h3 style="color:{c};margin:0 0 8px;font-size:1.08rem;font-weight:900;letter-spacing:-.2px;text-shadow:0 0 12px {c}44;">{w["name"]}</h3>'
+            + f'<div style="background:rgba(255,107,107,.18);border:1.5px solid rgba(255,107,107,.4);'
+            f'border-radius:100px;padding:4px 12px;font-size:.74rem;color:#FFB3B3;font-weight:800;margin-bottom:10px;">'
             f'👿 {w["villain"]}</div>'
-            + f'<p style="color:rgba(255,255,255,.62);font-size:.79rem;margin:0;line-height:1.65;flex:1;">{w["desc"]}</p>'
+            + f'<p style="color:rgba(255,255,255,.7);font-size:.81rem;margin:0;line-height:1.7;flex:1;">{w["desc"]}</p>'
             + '</div>'
         )
 
@@ -1102,7 +1179,7 @@ def _intro_step2_world(gs: GameState):
         f"""<!DOCTYPE html>
 <html><head>
 <style>
-  body {{ margin:0; background:transparent; font-family:'Segoe UI',sans-serif; }}
+  body {{ margin:0; background:transparent; font-family:'Nunito','Segoe UI',sans-serif; }}
   .card-row {{
     display:flex; gap:14px; padding:12px 4px 10px;
     align-items:stretch;
@@ -1595,41 +1672,40 @@ def page_news(gs: GameState):
     st.markdown(
         """
         <style>
-        .block-container { max-width: 760px !important; }
+        .block-container { max-width: 780px !important; }
         .news-card {
-            background: rgba(255,255,255,.06);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border: 1px solid rgba(255,255,255,.12);
-            border-radius: 24px;
+            background: rgba(255,255,255,.1);
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+            border: 2px solid rgba(255,255,255,.2);
+            border-top: 3px solid rgba(255,255,255,.45);
+            border-radius: 28px;
             padding: 24px 26px;
-            margin-bottom: 16px;
-            box-shadow: 0 8px 32px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.07);
-            transition: all .25s ease;
+            margin-bottom: 18px;
+            box-shadow: 0 12px 40px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.15);
+            transition: all .28s cubic-bezier(.34,1.56,.64,1);
             position: relative; overflow: hidden;
         }
-        .news-card::before {
-            content: '';
-            position: absolute; top: 0; left: 0; right: 0; height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,.2), transparent);
-        }
+        .news-card:hover { transform: translateY(-4px) scale(1.01); box-shadow: 0 20px 56px rgba(0,0,0,.25); }
         .news-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 14px; }
         .news-emoji-box {
-            width: 52px; height: 52px; min-width: 52px; border-radius: 16px;
-            background: rgba(255,255,255,.1); display: flex; align-items: center;
-            justify-content: center; font-size: 1.8rem;
+            width: 56px; height: 56px; min-width: 56px; border-radius: 18px;
+            background: linear-gradient(135deg, rgba(255,107,107,.25), rgba(255,142,83,.2));
+            border: 1.5px solid rgba(255,255,255,.25);
+            display: flex; align-items: center; justify-content: center; font-size: 2rem;
         }
-        .news-title { font-size: 1.05rem; font-weight: 800; color: white; line-height: 1.4; margin: 0; }
-        .news-summary { font-size: .93rem; color: rgba(255,255,255,.72); line-height: 1.85; margin-bottom: 14px; }
+        .news-title { font-size: 1.08rem; font-weight: 900; color: white; line-height: 1.4; margin: 0; }
+        .news-summary { font-size: .94rem; color: rgba(255,255,255,.78); line-height: 1.9; margin-bottom: 14px; }
         .news-lesson {
             display: inline-flex; align-items: center; gap: 8px;
-            background: rgba(255,215,0,.12); border: 1px solid rgba(255,215,0,.28);
-            border-radius: 12px; padding: 8px 14px; margin-bottom: 12px;
-            font-size: .87rem; color: #fde68a; font-weight: 700; line-height: 1.5;
+            background: linear-gradient(135deg, rgba(255,214,10,.2), rgba(255,163,26,.15));
+            border: 1.5px solid rgba(255,214,10,.4);
+            border-radius: 14px; padding: 9px 16px; margin-bottom: 12px;
+            font-size: .88rem; color: #FFE566; font-weight: 800; line-height: 1.5;
         }
         .news-link a {
-            font-size: .82rem; color: rgba(165,180,252,.8); text-decoration: none;
-            font-weight: 600; display: inline-flex; align-items: center; gap: 4px;
+            font-size: .83rem; color: rgba(160,210,255,.85); text-decoration: none;
+            font-weight: 700; display: inline-flex; align-items: center; gap: 5px;
         }
         .news-link a:hover { color: white; }
         </style>
@@ -1638,9 +1714,9 @@ def page_news(gs: GameState):
     )
 
     st.markdown(
-        '<div style="padding:8px 0 4px;">'
-        '<h2 style="color:white;font-size:1.7rem;font-weight:900;letter-spacing:-.6px;margin:0 0 6px;">📰 오늘의 주식 뉴스</h2>'
-        '<p style="color:rgba(255,255,255,.6);font-size:.93rem;margin:0;">쏠쏠이가 어린이도 이해하기 쉽게 설명해줄게요! 🌟</p>'
+        '<div style="padding:12px 0 8px;text-align:center;">'
+        '<h2 style="color:white;font-size:2rem;font-weight:900;letter-spacing:-.6px;margin:0 0 8px;">📰 오늘의 주식 뉴스</h2>'
+        '<p style="color:rgba(255,255,255,.65);font-size:.96rem;margin:0;">쏠쏠이가 어린이도 이해하기 쉽게 설명해줄게요! 🌟</p>'
         '</div>',
         unsafe_allow_html=True,
     )
@@ -1773,30 +1849,34 @@ def page_result(gs: GameState):
         .rv-congrats {{ color:rgba(255,255,255,.65); font-size:.92rem; margin:4px 0; }}
         .rv-stars {{ font-size:1.6rem; letter-spacing:4px; margin:10px 0; }}
 
-        .rv-bento {{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin:24px 0 20px; }}
+        .rv-bento {{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin:24px 0 22px; }}
         .rv-box {{
-            background:{tbg};
-            backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
-            border:1px solid {tc}33; border-radius:22px;
-            padding:24px 12px; text-align:center;
-            box-shadow:0 4px 20px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.06);
-            transition: all .25s ease;
+            background:rgba(255,255,255,.1);
+            backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);
+            border:2px solid rgba(255,255,255,.2);
+            border-top:3px solid {tc}99;
+            border-radius:26px;
+            padding:28px 12px; text-align:center;
+            box-shadow:0 8px 28px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.18);
+            transition: all .28s cubic-bezier(.34,1.56,.64,1);
         }}
-        .rv-box:hover {{ transform:translateY(-4px); box-shadow:0 12px 32px rgba(0,0,0,.28); }}
-        .rv-num {{ font-size:2.1rem; font-weight:900; color:{tc}; line-height:1.2; }}
-        .rv-lbl {{ font-size:.75rem; color:rgba(255,255,255,.5); margin-top:6px; letter-spacing:.3px; }}
+        .rv-box:hover {{ transform:translateY(-6px) scale(1.03); box-shadow:0 18px 48px rgba(0,0,0,.28); }}
+        .rv-num {{ font-size:2.2rem; font-weight:900; color:{tc}; line-height:1.2; }}
+        .rv-lbl {{ font-size:.78rem; color:rgba(255,255,255,.55); margin-top:8px; letter-spacing:.3px; font-weight:700; }}
 
-        .rv-tips-hd {{ color:white; font-size:1rem; font-weight:800; margin:6px 0 14px; letter-spacing:-.3px; }}
+        .rv-tips-hd {{ color:white; font-size:1.05rem; font-weight:900; margin:8px 0 16px; letter-spacing:-.3px; }}
         .rv-tip {{
             display:flex; align-items:flex-start; gap:12px;
-            background:rgba(255,255,255,.05);
-            backdrop-filter:blur(12px);
-            border:1px solid rgba(255,255,255,.1);
-            border-left:3px solid {tc};
-            border-radius:0 16px 16px 0;
-            padding:13px 16px; margin-bottom:10px;
-            color:rgba(255,255,255,.8); font-size:.9rem; line-height:1.7;
+            background:rgba(255,255,255,.09);
+            backdrop-filter:blur(16px);
+            border:1.5px solid rgba(255,255,255,.15);
+            border-left:4px solid {tc};
+            border-radius:0 20px 20px 0;
+            padding:14px 18px; margin-bottom:12px;
+            color:rgba(255,255,255,.85); font-size:.92rem; line-height:1.8;
+            transition: all .22s ease;
         }}
+        .rv-tip:hover {{ background:rgba(255,255,255,.14); transform:translateX(4px); }}
         </style>
         <div class="rv-hero">
           <div class="rv-orb">{evo["emoji"]}</div>
@@ -1825,12 +1905,13 @@ def page_result(gs: GameState):
     # ── 엄마에게 조르기 ─────────────────────────────────────────────────
     st.markdown(
         """
-        <div style="background:linear-gradient(135deg,rgba(255,105,180,.12),rgba(255,20,147,.06));
-                    border:1px solid rgba(255,105,180,.3);border-radius:22px;
-                    padding:20px 22px;margin:20px 0 8px;text-align:center;">
-          <div style="font-size:2rem;margin-bottom:6px;">📱</div>
-          <p style="color:white;font-weight:800;font-size:1rem;margin:0 0 4px;">엄마에게 조르기</p>
-          <p style="color:rgba(255,255,255,.55);font-size:.82rem;margin:0;">퀴즈 결과를 엄마 핸드폰으로 보내봐요!</p>
+        <div style="background:linear-gradient(135deg,rgba(255,107,107,.2),rgba(255,142,83,.15));
+                    border:2px solid rgba(255,107,107,.4);border-radius:28px;
+                    padding:24px;margin:24px 0 10px;text-align:center;
+                    box-shadow:0 8px 32px rgba(255,107,107,.2);">
+          <div style="font-size:3rem;margin-bottom:8px;animation:bounce 2s ease-in-out infinite;">💌</div>
+          <p style="color:white;font-weight:900;font-size:1.1rem;margin:0 0 6px;">엄마에게 조르기!</p>
+          <p style="color:rgba(255,255,255,.65);font-size:.88rem;margin:0;">퀴즈 결과를 엄마한테 메일로 보내봐요! 🙏</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -1858,29 +1939,168 @@ def page_result(gs: GameState):
 MOM_NUMBER = "01099859409"
 
 
+_SHINHAN_PRODUCTS_INFO = [
+    {
+        "name": "신한 MY 주니어통장",
+        "desc": "어린이 전용 입출금 통장 (수수료 무료)",
+        "link": "https://bank.shinhan.com/index.jsp?pcd=110004701&cr=020102010110",
+        "emoji": "🏦",
+    },
+    {
+        "name": "신한 아이행복 적금",
+        "desc": "매달 조금씩 모으는 어린이 전용 적금",
+        "link": "https://bank.shinhan.com/index.jsp?pcd=110004400&cr=020102010110",
+        "emoji": "🌱",
+    },
+    {
+        "name": "신한 주니어 펀드",
+        "desc": "우리 아이 미래를 위한 장기 투자 펀드",
+        "link": "https://www.shinhanfund.com/ko/fund/search?category=junior",
+        "emoji": "🚀",
+    },
+]
+
+
 def _build_msg_text(gs: GameState) -> str:
     name  = gs.character_name or "아이"
     coins = gs.coins
     done  = len(gs.completed_missions)
     wko   = {"space": "별빛 금융 은하", "dinosaur": "공룡 정글",
               "magic": "마법왕국", "ocean": "파도 저금섬"}.get(gs.world or "space", "핀퀘스트")
-    tier  = "주식 마스터" if coins >= 100 else ("금융 전사" if coins >= 50 else "새싹 탐험가")
+    tier  = "주식 마스터 👑" if coins >= 100 else ("금융 전사 ⚔️" if coins >= 50 else "새싹 탐험가 🌱")
+
     if done > 0:
-        return (
-            f"[신한 쏠어드벤쳐] {name}이(가) {wko}를 탐험했어요! 🎉\n"
-            f"퀴즈 {done}개 완료, 쏠코인 {coins}개 획득!\n"
-            f"등급: {tier} 🏆\n열심히 금융공부 했으니 용돈 올려주세요~ 🙏"
-        )
+        score_line = f"퀴즈 {done}개 완료, 쏠코인 {coins}개 획득! 등급: {tier}"
+    else:
+        score_line = f"쏠코인 {coins}개 획득! 금융 공부 열심히 하는 중이에요!"
+
     return (
-        f"[신한 쏠어드벤쳐] {name}이(가) 열심히 금융 공부 중이에요! 📚\n"
-        f"핀퀘스트에서 저축·투자·주식을 배우고 있어요!\n"
-        f"용돈 올려주시면 더 열심히 할게요~ 🙏"
+        f"엄마! 나 신한 쏠어드벤쳐에서 금융 공부 엄청 열심히 했어요! 📚\n\n"
+        f"🎮 탐험 세계: {wko}\n"
+        f"📊 오늘 결과: {score_line}\n\n"
+        f"엄마, 나 이렇게 열심히 공부했으니까 용돈 좀 올려주세요~ 🙏🙏🙏\n"
+        f"그리고 신한은행에서 나를 위한 금융 상품도 같이 알아봐요! 💕\n\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"🏦 신한은행 어린이 추천 상품\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"🌱 신한 아이행복 적금\n"
+        f"   → https://bank.shinhan.com/index.jsp?pcd=110004400\n\n"
+        f"🏦 신한 MY 주니어통장\n"
+        f"   → https://bank.shinhan.com/index.jsp?pcd=110004701\n\n"
+        f"🚀 신한 주니어 펀드 (장기 투자)\n"
+        f"   → https://www.shinhanfund.com/ko/fund/search?category=junior\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"엄마 사랑해요 💖 용돈 올려줄 거죠? 🥺"
     )
 
 
-def _render_naver_mail_btn(msg_text: str):
-    """네이버 SMTP로 엄마 이메일에 직접 전송."""
+def _build_html_email(gs: GameState) -> str:
+    """HTML 형식 이메일 본문 생성."""
+    name  = gs.character_name or "아이"
+    coins = gs.coins
+    done  = len(gs.completed_missions)
+    wko   = {"space": "별빛 금융 은하", "dinosaur": "공룡 정글",
+              "magic": "마법왕국", "ocean": "파도 저금섬"}.get(gs.world or "space", "핀퀘스트")
+    tier  = "주식 마스터 👑" if coins >= 100 else ("금융 전사 ⚔️" if coins >= 50 else "새싹 탐험가 🌱")
+    score = f"퀴즈 {done}개 완료 · 쏠코인 {coins}개 · {tier}" if done > 0 else f"쏠코인 {coins}개 획득 · {tier}"
+
+    products_html = ""
+    for p in _SHINHAN_PRODUCTS_INFO:
+        products_html += f"""
+        <tr>
+          <td style="padding:14px 18px;border-bottom:1px solid #E8F0FF;">
+            <span style="font-size:1.4rem;">{p['emoji']}</span>
+          </td>
+          <td style="padding:14px 18px;border-bottom:1px solid #E8F0FF;">
+            <div style="font-weight:800;color:#003082;font-size:1rem;">{p['name']}</div>
+            <div style="color:#6B7280;font-size:.85rem;margin-top:2px;">{p['desc']}</div>
+          </td>
+          <td style="padding:14px 18px;border-bottom:1px solid #E8F0FF;text-align:right;">
+            <a href="{p['link']}" style="background:linear-gradient(135deg,#0044CC,#0068FF);
+              color:white;text-decoration:none;padding:8px 16px;border-radius:20px;
+              font-size:.82rem;font-weight:800;white-space:nowrap;">바로가기 →</a>
+          </td>
+        </tr>"""
+
+    return f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#F0F4FF;font-family:'Apple SD Gothic Neo',sans-serif;">
+  <div style="max-width:540px;margin:32px auto;background:white;border-radius:24px;overflow:hidden;
+              box-shadow:0 8px 40px rgba(0,68,204,.18);">
+
+    <!-- 헤더 -->
+    <div style="background:linear-gradient(135deg,#0044CC 0%,#0068FF 60%,#1E8FFF 100%);
+                padding:36px 32px;text-align:center;">
+      <div style="font-size:3.5rem;margin-bottom:8px;">📚</div>
+      <div style="color:rgba(255,255,255,.8);font-size:.8rem;font-weight:700;letter-spacing:1px;margin-bottom:8px;">
+        신한 쏠어드벤쳐
+      </div>
+      <h1 style="color:white;font-size:1.5rem;font-weight:900;margin:0;letter-spacing:-.3px;">
+        엄마! 나 금융 공부 열심히 했어요! 🥺
+      </h1>
+    </div>
+
+    <!-- 본문 -->
+    <div style="padding:32px;">
+      <!-- 인사말 -->
+      <p style="font-size:1rem;color:#374151;line-height:1.8;margin:0 0 24px;">
+        엄마, <b style="color:#0044CC;">{name}</b>이에요! 😊<br>
+        오늘 신한 쏠어드벤쳐에서 <b>「{wko}」</b>을 탐험하면서<br>
+        저축, 투자, 주식에 대해 열심히 공부했어요!
+      </p>
+
+      <!-- 성적 카드 -->
+      <div style="background:linear-gradient(135deg,#EEF4FF,#F0F9FF);border:2px solid #BFDBFE;
+                  border-radius:20px;padding:20px 24px;margin-bottom:28px;text-align:center;">
+        <div style="font-size:.75rem;font-weight:800;color:#6B7280;letter-spacing:.8px;margin-bottom:12px;">
+          📊 오늘의 학습 성과
+        </div>
+        <div style="font-size:1.5rem;font-weight:900;color:#0044CC;">{score}</div>
+      </div>
+
+      <!-- 조르기 멘트 -->
+      <div style="background:#FFF7ED;border:2px solid #FED7AA;border-radius:20px;
+                  padding:20px 24px;margin-bottom:28px;">
+        <p style="color:#92400E;font-size:1rem;line-height:1.85;margin:0;font-weight:700;">
+          🙏 엄마, 이렇게 열심히 공부했으니까<br>
+          용돈 조금만 올려주시면 안 될까요?<br>
+          <span style="font-size:1.3rem;">더 열심히 할게요~ 💕</span>
+        </p>
+      </div>
+
+      <!-- 상품 추천 -->
+      <div style="margin-bottom:8px;">
+        <div style="font-weight:900;color:#003082;font-size:1.05rem;margin-bottom:14px;
+                    padding-bottom:10px;border-bottom:2px solid #E8F0FF;">
+          🏦 나를 위한 신한은행 금융 상품이에요!
+        </div>
+        <p style="color:#6B7280;font-size:.88rem;margin:0 0 16px;line-height:1.7;">
+          엄마, 아래 상품들이 저한테 딱 맞대요!<br>
+          같이 알아봐요~ 😊
+        </p>
+        <table style="width:100%;border-collapse:collapse;border-radius:16px;overflow:hidden;
+                      border:1px solid #E8F0FF;">
+          {products_html}
+        </table>
+      </div>
+    </div>
+
+    <!-- 푸터 -->
+    <div style="background:#F8FAFF;padding:20px 32px;text-align:center;
+                border-top:1px solid #E8F0FF;">
+      <p style="color:#9CA3AF;font-size:.75rem;margin:0;line-height:1.7;">
+        신한 쏠어드벤쳐 · 어린이 금융 교육 게임<br>
+        ※ 상품 금리·조건은 변동될 수 있으며, 상세 내용은 각 상품 페이지에서 확인해주세요.
+      </p>
+    </div>
+  </div>
+</body></html>"""
+
+
+def _render_naver_mail_btn(msg_text: str, gs=None):
+    """Gmail SMTP로 엄마 이메일에 직접 전송 (HTML 이메일)."""
     import smtplib
+    from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
 
     sender   = os.environ.get("NAVER_MAIL_USER", "").strip()
@@ -1890,9 +2110,9 @@ def _render_naver_mail_btn(msg_text: str):
     if not sender or not password or not mom_mail:
         st.markdown(
             """
-            <div style="background:rgba(3,199,90,.08);border:1px solid rgba(3,199,90,.3);
-                        border-radius:18px;padding:14px 20px;text-align:center;">
-              <p style="color:#6ee7a0;font-size:.85rem;margin:0;">
+            <div style="background:rgba(6,214,160,.1);border:2px solid rgba(6,214,160,.3);
+                        border-radius:20px;padding:14px 20px;text-align:center;">
+              <p style="color:#A8F7E5;font-size:.85rem;margin:0;font-weight:700;">
                 💌 <b>.env</b>에 <code>NAVER_MAIL_USER</code>, <code>NAVER_MAIL_PASS</code>,
                 <code>MOM_EMAIL</code>을 입력하면 바로 전송돼요!
               </p>
@@ -1905,16 +2125,35 @@ def _render_naver_mail_btn(msg_text: str):
     if st.button("💌 엄마한테 메일 바로 보내기", use_container_width=True, type="primary", key="naver_mail_btn"):
         with st.spinner("📨 전송 중..."):
             try:
-                mime = MIMEText(msg_text, "plain", "utf-8")
+                html_body = _build_html_email(gs) if gs is not None else None
+
+                mime = MIMEMultipart("alternative")
                 mime["Subject"] = "📚 [신한 쏠어드벤쳐] 용돈 올려주세요! 🙏"
                 mime["From"]    = sender
                 mime["To"]      = mom_mail
+
+                # 텍스트 fallback
+                mime.attach(MIMEText(msg_text, "plain", "utf-8"))
+                # HTML 본문 (이메일 클라이언트가 지원하면 HTML이 우선)
+                if html_body:
+                    mime.attach(MIMEText(html_body, "html", "utf-8"))
 
                 with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
                     smtp.login(sender, password)
                     smtp.sendmail(sender, mom_mail, mime.as_string())
 
-                st.success("✅ 엄마한테 메일 전송 완료! 용돈 올려달라고 했어요 🙏")
+                st.markdown(
+                    """
+                    <div style="background:linear-gradient(135deg,rgba(6,214,160,.2),rgba(6,214,160,.1));
+                                border:2px solid rgba(6,214,160,.4);border-radius:24px;
+                                padding:20px;text-align:center;margin:8px 0;">
+                      <div style="font-size:2.5rem;margin-bottom:8px;">✅</div>
+                      <p style="color:#06D6A0;font-weight:900;font-size:1rem;margin:0 0 4px;">메일 전송 완료!</p>
+                      <p style="color:rgba(255,255,255,.65);font-size:.85rem;margin:0;">용돈 올려달라고 했어요 🙏</p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
             except smtplib.SMTPAuthenticationError as e:
                 st.error(f"❌ 로그인 실패: {e}")
             except Exception as e:
@@ -1922,21 +2161,21 @@ def _render_naver_mail_btn(msg_text: str):
 
 
 def _send_result_sms(gs: GameState):
-    """결과 페이지용 텔레그램 공유 버튼 렌더."""
+    """결과 페이지용 메일 전송."""
     msg_text = _build_msg_text(gs)
     st.markdown(
         f"""
-        <div style="background:rgba(255,255,255,.07);backdrop-filter:blur(20px);
-                    border:1px solid rgba(255,105,180,.3);border-radius:22px;
-                    padding:20px 22px;margin:8px 0;">
-          <p style="color:rgba(255,255,255,.5);font-size:.75rem;font-weight:700;
-                    letter-spacing:.5px;margin:0 0 10px;">📨 보낼 메시지 미리보기</p>
-          <p style="color:white;font-size:.92rem;line-height:1.8;white-space:pre-line;margin:0;">{msg_text}</p>
+        <div style="background:rgba(255,255,255,.1);backdrop-filter:blur(24px);
+                    border:2px solid rgba(255,107,107,.35);border-top:3px solid rgba(255,107,107,.6);
+                    border-radius:28px;padding:24px;margin:8px 0;">
+          <p style="color:rgba(255,214,10,.9);font-size:.78rem;font-weight:900;
+                    letter-spacing:.6px;margin:0 0 12px;">📨 보낼 메시지 미리보기</p>
+          <p style="color:white;font-size:.9rem;line-height:1.85;white-space:pre-line;margin:0;">{msg_text}</p>
         </div>
         """,
         unsafe_allow_html=True,
     )
-    _render_naver_mail_btn(msg_text)
+    _render_naver_mail_btn(msg_text, gs=gs)
 
 
 # ── 엄마 조르기 페이지 ────────────────────────────────────────────────────────
@@ -1951,10 +2190,14 @@ def page_joreogi(gs: GameState):
 
     st.markdown(
         """
-        <div style="text-align:center;padding:32px 0 16px;animation:fadeUp .6s ease;">
-          <div style="font-size:4rem;">💌</div>
-          <h1 style="color:white;font-size:1.8rem;font-weight:900;margin:12px 0 6px;">엄마에게 조르기</h1>
-          <p style="color:rgba(255,255,255,.6);font-size:.95rem;">메일로 보내고 용돈을 올려달라고 해봐요!</p>
+        <div style="text-align:center;padding:36px 0 20px;animation:fadeUp .65s cubic-bezier(.34,1.56,.64,1);">
+          <div style="font-size:4.5rem;display:block;animation:bounce 2.2s ease-in-out infinite;">💌</div>
+          <h1 style="color:white;font-size:2rem;font-weight:900;margin:14px 0 8px;letter-spacing:-.5px;">엄마에게 조르기!</h1>
+          <p style="color:rgba(255,255,255,.65);font-size:.96rem;">메일로 보내고 용돈을 올려달라고 해봐요!</p>
+          <div style="display:flex;justify-content:center;gap:8px;margin-top:10px;">
+            <span style="background:rgba(255,107,107,.25);border:1.5px solid rgba(255,107,107,.5);border-radius:100px;padding:4px 14px;color:#FFB3B3;font-size:.8rem;font-weight:800;">💰 용돈 인상</span>
+            <span style="background:rgba(255,214,10,.2);border:1.5px solid rgba(255,214,10,.4);border-radius:100px;padding:4px 14px;color:#FFE566;font-size:.8rem;font-weight:800;">⭐ 성적 자랑</span>
+          </div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -1963,19 +2206,50 @@ def page_joreogi(gs: GameState):
     # ── 메시지 미리보기 ───────────────────────────────────────────────
     st.markdown(
         f"""
-        <div style="background:rgba(255,255,255,.07);backdrop-filter:blur(20px);
-                    border:1px solid rgba(255,105,180,.3);border-radius:22px;
-                    padding:24px;margin:0 0 16px;">
-          <p style="color:rgba(255,255,255,.5);font-size:.75rem;font-weight:700;
-                    letter-spacing:.5px;margin:0 0 12px;">📨 보낼 메시지 미리보기</p>
-          <p style="color:white;font-size:.95rem;line-height:1.85;white-space:pre-line;margin:0;">{msg_text}</p>
+        <div style="background:rgba(255,255,255,.1);backdrop-filter:blur(24px);
+                    border:2px solid rgba(255,107,107,.35);border-top:3px solid rgba(255,107,107,.6);
+                    border-radius:28px;padding:26px;margin:0 0 18px;
+                    box-shadow:0 12px 40px rgba(0,0,0,.18);">
+          <p style="color:rgba(255,214,10,.9);font-size:.78rem;font-weight:900;
+                    letter-spacing:.6px;margin:0 0 14px;">📨 보낼 메시지 미리보기</p>
+          <p style="color:white;font-size:.96rem;line-height:1.9;white-space:pre-line;margin:0;">{msg_text}</p>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    # ── 텔레그램 공유 버튼 ─────────────────────────────────────────────
-    _render_naver_mail_btn(msg_text)
+    # ── 추천 상품 링크 미리보기 ─────────────────────────────────────
+    products_preview = "".join(
+        f'<div style="display:flex;align-items:center;justify-content:space-between;'
+        f'background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.15);'
+        f'border-radius:18px;padding:12px 16px;margin-bottom:10px;">'
+        f'<div style="display:flex;align-items:center;gap:10px;">'
+        f'<span style="font-size:1.6rem;">{p["emoji"]}</span>'
+        f'<div><div style="color:white;font-weight:800;font-size:.9rem;">{p["name"]}</div>'
+        f'<div style="color:rgba(255,255,255,.55);font-size:.78rem;">{p["desc"]}</div></div>'
+        f'</div>'
+        f'<a href="{p["link"]}" target="_blank" style="background:linear-gradient(135deg,#0044CC,#0068FF);'
+        f'color:white;text-decoration:none;padding:7px 14px;border-radius:14px;'
+        f'font-size:.78rem;font-weight:900;white-space:nowrap;'
+        f'box-shadow:0 4px 12px rgba(0,68,204,.4);">바로가기 →</a>'
+        f'</div>'
+        for p in _SHINHAN_PRODUCTS_INFO
+    )
+    st.markdown(
+        f"""
+        <div style="background:rgba(255,255,255,.08);backdrop-filter:blur(20px);
+                    border:2px solid rgba(90,180,255,.3);border-top:3px solid rgba(0,68,204,.8);
+                    border-radius:28px;padding:22px;margin:0 0 16px;">
+          <p style="color:rgba(90,180,255,.9);font-size:.78rem;font-weight:900;
+                    letter-spacing:.6px;margin:0 0 16px;">🏦 메일에 포함되는 신한 추천 상품</p>
+          {products_preview}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # ── 이메일 전송 버튼 ─────────────────────────────────────────────
+    _render_naver_mail_btn(msg_text, gs=gs)
 
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
@@ -2029,27 +2303,28 @@ def page_word_of_day(gs: GameState):
             animation:fadeUp .65s cubic-bezier(.34,1.56,.64,1);
         }}
         .wd-badge {{
-            display:inline-block; background:rgba(255,215,0,.15);
-            border:1px solid rgba(255,215,0,.3); border-radius:100px;
-            padding:5px 16px; color:#fde68a; font-size:.78rem; font-weight:800;
-            letter-spacing:1px; margin-bottom:16px;
+            display:inline-flex; align-items:center; gap:6px;
+            background:linear-gradient(135deg,rgba(255,214,10,.25),rgba(255,107,107,.2));
+            border:2px solid rgba(255,214,10,.5); border-radius:100px;
+            padding:7px 20px; color:#FFE566; font-size:.82rem; font-weight:900;
+            letter-spacing:.8px; margin-bottom:18px;
+            box-shadow:0 4px 16px rgba(255,214,10,.3);
         }}
         .wd-card {{
-            background:rgba(255,255,255,.07);
-            backdrop-filter:blur(28px); -webkit-backdrop-filter:blur(28px);
-            border:1px solid rgba(255,255,255,.14); border-radius:28px;
-            padding:36px 32px; margin:16px 0;
-            box-shadow:0 12px 40px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.08);
-            position:relative; overflow:hidden;
-        }}
-        .wd-card::before {{
-            content:''; position:absolute; top:0; left:0; right:0; height:1px;
-            background:linear-gradient(90deg,transparent,rgba(255,255,255,.25),transparent);
+            background:rgba(255,255,255,.1);
+            backdrop-filter:blur(32px); -webkit-backdrop-filter:blur(32px);
+            border:2px solid rgba(255,255,255,.22);
+            border-top:3px solid rgba(255,214,10,.7);
+            border-radius:32px;
+            padding:36px 32px; margin:18px 0;
+            box-shadow:0 16px 48px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.18);
         }}
         .wd-tip {{
-            background:rgba(255,215,0,.1); border:1px solid rgba(255,215,0,.25);
-            border-radius:16px; padding:14px 18px; margin-top:20px;
-            color:#fde68a; font-size:.9rem; line-height:1.7; font-weight:600;
+            background:linear-gradient(135deg,rgba(255,214,10,.18),rgba(255,163,26,.12));
+            border:2px solid rgba(255,214,10,.35);
+            border-radius:20px; padding:16px 20px; margin-top:22px;
+            color:#FFE566; font-size:.92rem; line-height:1.75; font-weight:700;
+            box-shadow:0 4px 20px rgba(255,214,10,.15);
         }}
         </style>
         <div class="wd-hero">
@@ -2114,18 +2389,24 @@ def page_allowance(gs: GameState):
           <h2 style="color:white;font-size:1.7rem;font-weight:900;letter-spacing:-.5px;margin:0 0 6px;">💰 용돈 기입장</h2>
           <p style="color:rgba(255,255,255,.55);font-size:.9rem;margin:0;">내 용돈을 기록하고 관리해봐요!</p>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:18px 0 24px;">
-          <div style="background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.3);border-radius:20px;padding:20px 12px;text-align:center;">
-            <div style="font-size:1.6rem;font-weight:900;color:#4ade80;">+{total_in:,}</div>
-            <div style="font-size:.75rem;color:rgba(255,255,255,.5);margin-top:4px;">받은 용돈</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:20px 0 26px;">
+          <div style="background:rgba(6,214,160,.15);border:2px solid rgba(6,214,160,.4);
+              border-top:3px solid rgba(6,214,160,.7);border-radius:24px;padding:22px 12px;text-align:center;
+              box-shadow:0 6px 24px rgba(6,214,160,.18);">
+            <div style="font-size:1.8rem;font-weight:900;color:#06D6A0;">+{total_in:,}원</div>
+            <div style="font-size:.78rem;color:rgba(255,255,255,.55);margin-top:6px;font-weight:700;">받은 용돈</div>
           </div>
-          <div style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);border-radius:20px;padding:20px 12px;text-align:center;">
-            <div style="font-size:1.6rem;font-weight:900;color:#f87171;">-{total_out:,}</div>
-            <div style="font-size:.75rem;color:rgba(255,255,255,.5);margin-top:4px;">쓴 돈</div>
+          <div style="background:rgba(255,107,107,.15);border:2px solid rgba(255,107,107,.4);
+              border-top:3px solid rgba(255,107,107,.7);border-radius:24px;padding:22px 12px;text-align:center;
+              box-shadow:0 6px 24px rgba(255,107,107,.18);">
+            <div style="font-size:1.8rem;font-weight:900;color:#FF6B6B;">-{total_out:,}원</div>
+            <div style="font-size:.78rem;color:rgba(255,255,255,.55);margin-top:6px;font-weight:700;">쓴 돈</div>
           </div>
-          <div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:20px 12px;text-align:center;">
-            <div style="font-size:1.6rem;font-weight:900;color:{balance_color};">{balance:,}원</div>
-            <div style="font-size:.75rem;color:rgba(255,255,255,.5);margin-top:4px;">남은 용돈</div>
+          <div style="background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.2);
+              border-top:3px solid rgba(255,214,10,.6);border-radius:24px;padding:22px 12px;text-align:center;
+              box-shadow:0 6px 24px rgba(0,0,0,.15);">
+            <div style="font-size:1.8rem;font-weight:900;color:{balance_color};">{balance:,}원</div>
+            <div style="font-size:.78rem;color:rgba(255,255,255,.55);margin-top:6px;font-weight:700;">남은 용돈</div>
           </div>
         </div>
         """,
@@ -2159,10 +2440,12 @@ def page_allowance(gs: GameState):
             sign = "+" if r["type"] == "in" else "-"
             st.markdown(
                 f'<div style="display:flex;justify-content:space-between;align-items:center;'
-                f'background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);'
-                f'border-radius:14px;padding:12px 16px;margin-bottom:8px;">'
-                f'<span style="color:rgba(255,255,255,.8);font-size:.9rem;">{r["emoji"]} {r["desc"]}</span>'
-                f'<span style="color:{col};font-weight:800;font-size:.95rem;">{sign}{r["amount"]:,}원</span>'
+                f'background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.15);'
+                f'border-left:4px solid {col};'
+                f'border-radius:0 18px 18px 0;padding:13px 18px;margin-bottom:10px;'
+                f'transition:all .2s ease;">'
+                f'<span style="color:rgba(255,255,255,.85);font-size:.92rem;font-weight:700;">{r["emoji"]} {r["desc"]}</span>'
+                f'<span style="color:{col};font-weight:900;font-size:1rem;">{sign}{r["amount"]:,}원</span>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
@@ -2206,22 +2489,27 @@ def page_savings(gs: GameState):
     )
 
     if goal > 0:
-        bar_color = "#4ade80" if pct >= 100 else "#818cf8"
+        bar_color = "#06D6A0" if pct >= 100 else "#845EF7"
+        bar_color2 = "#5AB4FF" if pct >= 100 else "#FF6B6B"
         st.markdown(
             f"""
-            <div style="background:rgba(255,255,255,.07);backdrop-filter:blur(24px);
-                        border:1px solid rgba(255,255,255,.13);border-radius:28px;padding:28px;margin:16px 0;">
-              <div style="text-align:center;margin-bottom:20px;">
-                <div style="font-size:4rem;animation:floatY 2.8s ease-in-out infinite;">{pig_emoji}</div>
-                <div style="color:white;font-size:1.25rem;font-weight:900;margin:10px 0 4px;">{goal_name or "저축 목표"}</div>
-                <div style="color:rgba(255,255,255,.55);font-size:.85rem;">{saved:,}원 / {goal:,}원</div>
+            <div style="background:rgba(255,255,255,.1);backdrop-filter:blur(28px);
+                        border:2px solid rgba(255,255,255,.22);border-top:3px solid {bar_color};
+                        border-radius:32px;padding:30px;margin:18px 0;
+                        box-shadow:0 12px 40px rgba(0,0,0,.2);">
+              <div style="text-align:center;margin-bottom:22px;">
+                <div style="font-size:4.5rem;animation:floatY 2.8s ease-in-out infinite;
+                    filter:drop-shadow(0 0 16px rgba(132,94,247,.5));">{pig_emoji}</div>
+                <div style="color:white;font-size:1.3rem;font-weight:900;margin:12px 0 6px;letter-spacing:-.3px;">
+                    {goal_name or "저축 목표"}</div>
+                <div style="color:rgba(255,255,255,.6);font-size:.88rem;font-weight:700;">{saved:,}원 / {goal:,}원</div>
               </div>
-              <div style="background:rgba(255,255,255,.1);border-radius:100px;height:18px;overflow:hidden;margin-bottom:8px;">
-                <div style="background:linear-gradient(90deg,{bar_color},{bar_color}aa);height:100%;
-                             width:{pct}%;border-radius:100px;transition:width .5s ease;
-                             box-shadow:0 0 12px {bar_color}88;"></div>
+              <div style="background:rgba(255,255,255,.12);border-radius:100px;height:20px;overflow:hidden;margin-bottom:10px;">
+                <div style="background:linear-gradient(90deg,{bar_color},{bar_color2});height:100%;
+                             width:{pct}%;border-radius:100px;transition:width .6s ease;
+                             box-shadow:0 0 16px {bar_color}88;"></div>
               </div>
-              <div style="text-align:right;color:{bar_color};font-size:.88rem;font-weight:800;">{pct}% 달성!</div>
+              <div style="text-align:right;color:{bar_color};font-size:.92rem;font-weight:900;">{pct}% 달성! 🎯</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -2402,41 +2690,43 @@ def page_products(gs: GameState):
     st.markdown(
         """
         <style>
-        .pd-hero { text-align:center; padding:24px 0 16px; animation:fadeUp .7s ease-out; }
+        .pd-hero { text-align:center; padding:28px 0 18px; animation:fadeUp .7s cubic-bezier(.34,1.56,.64,1); }
         .pd-card {
-            background:rgba(255,255,255,.06);
-            backdrop-filter:blur(28px); -webkit-backdrop-filter:blur(28px);
-            border:1px solid rgba(255,255,255,.12); border-radius:28px;
-            padding:28px 26px; margin-bottom:18px;
-            box-shadow:0 8px 32px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.08);
-            position:relative; overflow:hidden;
+            background:rgba(255,255,255,.1);
+            backdrop-filter:blur(32px); -webkit-backdrop-filter:blur(32px);
+            border:2px solid rgba(255,255,255,.2);
+            border-top:3px solid rgba(255,255,255,.5);
+            border-radius:32px;
+            padding:28px 26px; margin-bottom:20px;
+            box-shadow:0 12px 40px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.18);
+            transition:all .28s cubic-bezier(.34,1.56,.64,1);
         }
-        .pd-card::before {
-            content:''; position:absolute; top:0; left:0; right:0; height:1px;
-            background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent);
-        }
+        .pd-card:hover { transform:translateY(-4px); box-shadow:0 20px 56px rgba(0,0,0,.28); }
         .pd-tag {
             display:inline-block; border-radius:100px;
-            padding:3px 12px; font-size:.72rem; font-weight:800; letter-spacing:.3px;
-            margin-bottom:10px;
+            padding:5px 14px; font-size:.74rem; font-weight:900; letter-spacing:.3px;
+            margin-bottom:12px; border-width:2px; border-style:solid;
         }
-        .pd-diff { display:flex; gap:4px; margin-bottom:8px; }
-        .pd-dot-on  { width:10px; height:10px; border-radius:50%; background:rgba(255,255,255,.9); }
-        .pd-dot-off { width:10px; height:10px; border-radius:50%; background:rgba(255,255,255,.2); }
+        .pd-diff { display:flex; gap:5px; margin-bottom:10px; align-items:center; }
+        .pd-dot-on  { width:11px; height:11px; border-radius:50%; background:rgba(255,255,255,.95);
+            box-shadow:0 0 6px rgba(255,255,255,.6); }
+        .pd-dot-off { width:11px; height:11px; border-radius:50%; background:rgba(255,255,255,.2); }
         .pd-point {
             display:flex; align-items:flex-start; gap:8px;
-            color:rgba(255,255,255,.75); font-size:.88rem; line-height:1.6;
-            margin-bottom:6px;
+            color:rgba(255,255,255,.82); font-size:.9rem; line-height:1.65;
+            margin-bottom:8px;
         }
         .pd-analogy {
-            background:rgba(255,215,0,.1); border:1px solid rgba(255,215,0,.25);
-            border-radius:14px; padding:12px 16px; margin-top:16px;
-            color:#fde68a; font-size:.87rem; line-height:1.7; font-weight:600;
+            background:linear-gradient(135deg,rgba(255,214,10,.2),rgba(255,163,26,.12));
+            border:2px solid rgba(255,214,10,.38);
+            border-radius:20px; padding:14px 18px; margin-top:18px;
+            color:#FFE566; font-size:.9rem; line-height:1.75; font-weight:700;
+            box-shadow:0 4px 16px rgba(255,214,10,.15);
         }
         .pd-tip {
-            background:rgba(255,255,255,.05); border-left:3px solid rgba(255,255,255,.3);
-            border-radius:0 12px 12px 0; padding:11px 14px; margin:6px 0;
-            color:rgba(255,255,255,.72); font-size:.85rem; line-height:1.65;
+            background:rgba(255,255,255,.08); border-left:4px solid rgba(255,214,10,.6);
+            border-radius:0 16px 16px 0; padding:13px 16px; margin:8px 0;
+            color:rgba(255,255,255,.82); font-size:.88rem; line-height:1.7;
         }
         </style>
         """,
@@ -2446,16 +2736,22 @@ def page_products(gs: GameState):
     st.markdown(
         """
         <div class="pd-hero">
-          <div style="display:inline-block;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);
-                      border-radius:100px;padding:5px 16px;color:rgba(255,255,255,.6);font-size:.76rem;
-                      font-weight:700;letter-spacing:1.2px;margin-bottom:16px;">
-            ✦ 신한은행 추천 상품 ✦
+          <div style="display:inline-flex;align-items:center;gap:6px;
+                      background:white;border-radius:100px;
+                      padding:7px 20px;color:#003082;font-size:.8rem;
+                      font-weight:900;letter-spacing:.5px;margin-bottom:18px;
+                      box-shadow:0 4px 16px rgba(0,0,0,.2);">
+            <div style="width:18px;height:18px;background:linear-gradient(135deg,#0044CC,#0068FF);
+                border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+                font-size:9px;color:white;font-weight:900;">신</div>
+            신한은행 추천 상품
           </div>
-          <div style="font-size:3rem;animation:bounce 1.2s ease-out;display:block;margin-bottom:8px;">🏦</div>
-          <h2 style="color:white;font-size:1.8rem;font-weight:900;letter-spacing:-.6px;margin:0 0 8px;">
+          <div style="font-size:3.5rem;animation:bounce 1.2s ease-out;display:block;margin-bottom:10px;
+              filter:drop-shadow(0 0 16px rgba(6,214,160,.5));">🏦</div>
+          <h2 style="color:white;font-size:1.9rem;font-weight:900;letter-spacing:-.6px;margin:0 0 10px;">
             어린이 금융 상품 추천
           </h2>
-          <p style="color:rgba(255,255,255,.6);font-size:.95rem;margin:0;">
+          <p style="color:rgba(255,255,255,.65);font-size:.96rem;margin:0;font-weight:700;">
             쏠쏠이가 쉽게 설명해줄게요! 부모님과 함께 알아봐요 😊
           </p>
         </div>
@@ -2470,22 +2766,23 @@ def page_products(gs: GameState):
         )
         points_html = "".join(f'<div class="pd-point">{pt}</div>' for pt in p["points"])
 
+        r2, g2, b2 = tuple(int(p["tag_color"].lstrip("#")[i:i+2], 16) for i in (0, 2, 4))
         st.markdown(
-            f'<div class="pd-card">'
-            f'<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;">'
+            f'<div class="pd-card" style="border-top-color:rgba({r2},{g2},{b2},.8);">'
+            f'<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;">'
             f'  <div>'
-            f'    <span class="pd-tag" style="background:{p["tag_color"]}22;color:{p["tag_color"]};border:1px solid {p["tag_color"]}44;">{p["tag"]}</span>'
+            f'    <span class="pd-tag" style="background:rgba({r2},{g2},{b2},.2);color:{p["tag_color"]};border-color:rgba({r2},{g2},{b2},.45);">{p["tag"]}</span>'
             f'    <div class="pd-diff">{diff_dots}'
-            f'      <span style="color:rgba(255,255,255,.4);font-size:.72rem;margin-left:4px;">난이도: {p["difficulty_label"]}</span>'
+            f'      <span style="color:rgba(255,255,255,.45);font-size:.74rem;margin-left:5px;font-weight:700;">난이도: {p["difficulty_label"]}</span>'
             f'    </div>'
             f'  </div>'
-            f'  <div style="font-size:2.8rem;">{p["emoji"]}</div>'
+            f'  <div style="font-size:3.2rem;filter:drop-shadow(0 0 12px rgba({r2},{g2},{b2},.5));">{p["emoji"]}</div>'
             f'</div>'
-            f'<h3 style="color:white;font-size:1.12rem;font-weight:900;margin:0 0 4px;letter-spacing:-.3px;">{p["name"]}</h3>'
-            f'<p style="color:{p["tag_color"]};font-size:.85rem;font-weight:700;margin:0 0 12px;">👶 대상: {p["target"]}</p>'
-            f'<p style="color:rgba(255,255,255,.5);font-size:.75rem;font-weight:800;letter-spacing:.5px;margin:0 0 6px;">한 마디로?</p>'
-            f'<p style="color:white;font-size:1rem;font-weight:700;margin:0 0 14px;">{p["headline"]}</p>'
-            f'<p style="color:rgba(255,255,255,.7);font-size:.9rem;line-height:1.8;margin:0 0 14px;">{p["simple"]}</p>'
+            f'<h3 style="color:white;font-size:1.15rem;font-weight:900;margin:0 0 6px;letter-spacing:-.3px;">{p["name"]}</h3>'
+            f'<p style="color:{p["tag_color"]};font-size:.87rem;font-weight:800;margin:0 0 14px;">👶 대상: {p["target"]}</p>'
+            f'<p style="color:rgba(255,255,255,.5);font-size:.76rem;font-weight:900;letter-spacing:.6px;margin:0 0 6px;">한 마디로?</p>'
+            f'<p style="color:white;font-size:1.02rem;font-weight:800;margin:0 0 14px;letter-spacing:-.2px;">{p["headline"]}</p>'
+            f'<p style="color:rgba(255,255,255,.75);font-size:.92rem;line-height:1.85;margin:0 0 16px;">{p["simple"]}</p>'
             f'<div>{points_html}</div>'
             f'<div class="pd-analogy">🌟 {p["analogy"]}</div>'
             f'</div>',
