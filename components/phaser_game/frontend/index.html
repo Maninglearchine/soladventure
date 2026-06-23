@@ -128,6 +128,43 @@ body { background: #111; overflow: hidden; font-family: 'Segoe UI Emoji', 'Apple
 #wc-btn:hover { transform: scale(1.05); box-shadow: 0 6px 22px rgba(255,215,0,.55); }
 @keyframes wcPop { from { transform: scale(0.5); opacity:0; } to { transform: scale(1); opacity:1; } }
 
+/* ── Card Acquired overlay ────────────────── */
+#card-acquired-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.92);
+  z-index: 9999;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+#card-acquired-overlay .ca-badge {
+  font-size: 18px; font-weight: 900; color: #ffd700;
+  letter-spacing: 2px; margin-bottom: 14px;
+  animation: caSlideDown .5s cubic-bezier(.34,1.56,.64,1);
+}
+#card-acquired-overlay .ca-img {
+  max-width: 272px; max-height: 336px; width: 70vw;
+  border-radius: 18px;
+  box-shadow: 0 0 60px rgba(255,215,0,.55), 0 24px 60px rgba(0,0,0,.9);
+  animation: caCardPop .6s .15s cubic-bezier(.34,1.56,.64,1) both;
+}
+#card-acquired-overlay .ca-btn {
+  margin-top: 28px;
+  padding: 14px 48px;
+  font-size: 16px; font-weight: 800;
+  background: linear-gradient(135deg,#ffd700,#ffaa00);
+  color: #1a1a1a; border: none; border-radius: 14px; cursor: pointer;
+  box-shadow: 0 6px 24px rgba(255,215,0,.45);
+  animation: caSlideUp .5s .35s cubic-bezier(.34,1.56,.64,1) both;
+}
+#card-acquired-overlay .ca-btn:hover { transform: scale(1.06); }
+@keyframes caCardPop  { from { transform: scale(0.4) rotateY(90deg); opacity:0; } to { transform: scale(1) rotateY(0deg); opacity:1; } }
+@keyframes caSlideDown { from { transform: translateY(-30px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+@keyframes caSlideUp   { from { transform: translateY(30px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+
 /* ── Battle overlay ──────────────────────── */
 #battle-ov {
   display:none; position:absolute; inset:0;
@@ -226,6 +263,31 @@ body { background: #111; overflow: hidden; font-family: 'Segoe UI Emoji', 'Apple
   0%   { transform:translateY(0); opacity:0; }
   30%  { opacity:1; }
   100% { transform:translateY(-22px); opacity:1; }
+}
+@keyframes toastIn {
+  from { transform:translateY(-30px) scale(.85); opacity:0; }
+  to   { transform:translateY(0) scale(1); opacity:1; }
+}
+@keyframes toastOut {
+  from { transform:translateY(0) scale(1); opacity:1; }
+  to   { transform:translateY(-30px) scale(.85); opacity:0; }
+}
+#game-toast {
+  display: none;
+  position: absolute;
+  top: 50px; left: 50%; transform: translateX(-50%);
+  z-index: 300;
+  background: linear-gradient(135deg, #ffd700, #ffb300);
+  border-radius: 20px;
+  padding: 18px 32px;
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #1a1a1a;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(255,180,0,.5);
+  pointer-events: none;
+  line-height: 1.6;
+  animation: toastIn .35s cubic-bezier(.34,1.56,.64,1);
 }
 @keyframes pulse {
   0%,100% { transform:scale(1); }
@@ -462,6 +524,16 @@ body { background: #111; overflow: hidden; font-family: 'Segoe UI Emoji', 'Apple
     </div>
   </div>
 
+  <!-- ── Card Acquired overlay ────────────────────── -->
+  <div id="card-acquired-overlay">
+    <div class="ca-badge">✨ 카드 획득!</div>
+    <img id="ca-img" class="ca-img" src="" alt="획득 카드">
+    <button id="ca-btn" class="ca-btn">확인!</button>
+  </div>
+
+  <!-- ── Game toast (3 s reward notification) ─────── -->
+  <div id="game-toast"></div>
+
   <!-- ── Concept card ──────────────────────── -->
   <div id="concept-card"></div>
 
@@ -523,6 +595,18 @@ function setHeight(h) {
   window.parent.postMessage(
     { isStreamlitMessage: true, type: 'streamlit:setFrameHeight', height: h }, '*'
   );
+}
+
+function showCardAcquired(imgSrc, cb) {
+  const ov  = document.getElementById('card-acquired-overlay');
+  const img = document.getElementById('ca-img');
+  const btn = document.getElementById('ca-btn');
+  img.src = imgSrc;
+  ov.style.display = 'flex';
+  btn.onclick = () => {
+    ov.style.display = 'none';
+    if (cb) cb();
+  };
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1235,7 +1319,26 @@ class GameScene extends Phaser.Scene {
       npc_type: npcType,
     });
 
-    this._battlePhaseCorrect(earned);
+    // Show 5-second reward toast, then proceed to victory panel
+    this._showGameToast(`🎉 퀴즈 정답!<br>⭐ +${earned} 쏠코인 획득!`, 5000,
+      () => this._battlePhaseCorrect(earned));
+  }
+
+  _showGameToast(html, duration, cb) {
+    const el = document.getElementById('game-toast');
+    el.innerHTML = html;
+    el.style.animation = 'none';
+    el.style.display = 'block';
+    // Re-trigger animation
+    void el.offsetWidth;
+    el.style.animation = 'toastIn .35s cubic-bezier(.34,1.56,.64,1)';
+    setTimeout(() => {
+      el.style.animation = 'toastOut .3s ease forwards';
+      setTimeout(() => {
+        el.style.display = 'none';
+        if (cb) cb();
+      }, 300);
+    }, duration - 300);
   }
 
   // ── Feedback DOM overlay ──────────────────────────────
@@ -1599,13 +1702,19 @@ class GameScene extends Phaser.Scene {
       `💰 ${window.GS.coins} 코인  (+50 클리어 보너스)`;
     document.getElementById('wc-overlay').style.display = 'flex';
 
+    // 보스 처치 즉시 Python에 알림 — 어떤 경로로 이동하든 world_clear 반영
+    setVal({ type: 'WORLD_CLEAR', ts: Date.now(), world: this.cfg.world,
+             final_coins: window.GS.coins, time_sec: elapsed });
+
     document.getElementById('wc-btn').onclick = () => {
       document.getElementById('wc-overlay').style.display = 'none';
-      if (this.cfg.world === 'space') {
-        this._showSpaceEndScreen(elapsed);
-      } else {
-        this._playVideo('video/shinhan.mp4', elapsed);
-      }
+      showCardAcquired('assets/card/blackcard.png', () => {
+        if (this.cfg.world === 'space') {
+          this._showSpaceEndScreen(elapsed);
+        } else {
+          this._playVideo('video/shinhan.mp4', elapsed);
+        }
+      });
     };
   }
 
@@ -2038,6 +2147,8 @@ function startBattleGame(onComplete) {
     villMoveTimer: 0,
     quizActive: false,
     done: false,
+    defendWindowActive: false,  // Z키 방어 가능 구간
+    playerDefended: false,      // Z키로 방어 완료 여부
   };
 
   // Positions
@@ -2047,7 +2158,7 @@ function startBattleGame(onComplete) {
   const PLAYER_SPEED = 5;
   const keys = { left: false, right: false };
 
-  const ATTACK_COOLDOWN = 3000;
+  const ATTACK_COOLDOWN = 1000;
   const STATE_DURATION  = 500;
 
   // ── 내레이션 (잠깐 보여주고 callback) ────────────────
@@ -2075,7 +2186,19 @@ function startBattleGame(onComplete) {
 
     state.quizActive = true;
     el.style.display = 'flex';
-    setTimeout(() => { el.style.display = 'none'; state.quizActive = false; cb(); }, duration);
+    if (duration <= 0) {
+      el.style.cursor = 'pointer';
+      const dismiss = () => {
+        el.style.display = 'none';
+        el.style.cursor = '';
+        el.removeEventListener('click', dismiss);
+        state.quizActive = false;
+        cb();
+      };
+      el.addEventListener('click', dismiss);
+    } else {
+      setTimeout(() => { el.style.display = 'none'; state.quizActive = false; cb(); }, duration);
+    }
   }
 
   // Load images
@@ -2107,8 +2230,17 @@ function startBattleGame(onComplete) {
     document.getElementById('battle-hp-player').textContent = hp(state.playerHp) + ' 쏠쏠이';
     document.getElementById('battle-hp-vill').textContent   = '빌런 ' + hp(state.villHp);
     const cd = state.playerCooldown;
-    document.getElementById('battle-cooldown').textContent =
-      cd > 0 ? `쿨타임 ${(cd/1000).toFixed(1)}초` : '⚔️ 공격 준비!';
+    const cdEl = document.getElementById('battle-cooldown');
+    if (state.defendWindowActive) {
+      cdEl.textContent = '🛡️ Z키로 방어!';
+      cdEl.style.color = '#86efac';
+    } else if (cd > 0) {
+      cdEl.textContent = `쿨타임 ${(cd/1000).toFixed(1)}초`;
+      cdEl.style.color = '#fbbf24';
+    } else {
+      cdEl.textContent = '⚔️ 공격 준비!';
+      cdEl.style.color = '#fbbf24';
+    }
   }
 
   function endBattle(win) {
@@ -2137,6 +2269,7 @@ function startBattleGame(onComplete) {
       overlay.style.display = 'none';
       document.removeEventListener('keydown', onKey);
       document.removeEventListener('keyup', onKeyUp);
+      setVal({ type: 'STAGE2_WIN', ts: Date.now(), total_coins: window.GS.coins });
       if (onComplete) onComplete();
     };
     resBtns.appendChild(retryBtn);
@@ -2211,19 +2344,47 @@ function startBattleGame(onComplete) {
   }
 
   function onKey(e) {
-    if (state.done || state.quizActive) return;
+    if (state.done) return;
     if (e.code === 'ArrowLeft')  { keys.left  = true; e.preventDefault(); return; }
     if (e.code === 'ArrowRight') { keys.right = true; e.preventDefault(); return; }
+
+    // ── Z키: 방어 ──────────────────────────────────────────────────
+    if (e.code === 'KeyZ') {
+      e.preventDefault();
+      if (state.defendWindowActive) {
+        state.defendWindowActive = false;
+        state.playerDefended = true;
+        state.playerState = 'defend';
+        state.playerStateTimer = 800;
+        showActionResult('🛡️ Z키 방어 성공!', '#86efac', 1100, 'assets/solsol5.png', () => {
+          state.playerState = 'idle';
+          state.quizActive = false;
+        });
+      } else if (!state.quizActive) {
+        state.playerState = 'defend';
+        state.playerStateTimer = 600;
+      }
+      return;
+    }
+
+    if (state.quizActive) return;
     if (e.code !== 'Space') return;
     e.preventDefault();
     if (state.playerCooldown > 0) return;
     const dist = Math.abs(villX - playerX);
-    if (dist >= W * 0.12) return; // 범위 밖이면 무시
+    const inRange = dist < W * 0.12;
     state.playerCooldown = ATTACK_COOLDOWN;
+    // 공격 모션은 거리에 상관없이 항상 발동
     state.playerState = 'attack';
     state.playerStateTimer = STATE_DURATION;
     state.quizActive = true;
-    // 내레이션 → 퀴즈
+
+    if (!inRange) {
+      setTimeout(() => { state.quizActive = false; }, 500);
+      return;
+    }
+
+    // 범위 안: 퀴즈 → 데미지
     showNarration('⚔️ 악당에게 돌격했어요!<br><span style="font-size:1.1rem;color:#fbbf24;">퀴즈를 맞혀서 공격을 성공시켜보세요!</span>', 1400, () => {
       showBattleQuiz('attack', (correct) => {
         if (correct) {
@@ -2236,7 +2397,9 @@ function startBattleGame(onComplete) {
               setTimeout(() => {
                 window.GS.coins = (window.GS.coins || 0) + 50;
                 setVal({ type: 'COIN_COLLECTED', total_coins: window.GS.coins });
-                showActionResult('🏆 빌런 처치 완료!\n+50 쏠코인 획득!', '#ffd700', 2000, 'assets/solsol5.png', () => endBattle(true));
+                showActionResult('🏆 빌런 처치 완료!\n+50 쏠코인 획득!\n\n👆 화면 클릭해서 계속하기', '#ffd700', 0, 'assets/solsol5.png', () => {
+                  showCardAcquired('assets/card/villcard.png', () => endBattle(true));
+                });
               }, 600);
             }
           });
@@ -2287,14 +2450,20 @@ function startBattleGame(onComplete) {
       if (state.villMoveTimer <= 0) {
         const dist = villX - playerX;
         if (Math.abs(dist) < W * 0.12) {
-          state.villState = 'attack';
-          state.villStateTimer = STATE_DURATION;
           if (state.villCooldown <= 0) {
+            state.villState = 'attack';
+            state.villStateTimer = STATE_DURATION;
             state.villCooldown = 2800;
             state.quizActive = true;
-            // 공격 액션 0.5초 → 내레이션 → 퀴즈
+            // Z키 방어 윈도우 열기
+            state.defendWindowActive = true;
+            state.playerDefended = false;
+            // 공격 액션 0.5초 → 내레이션 → 퀴즈 (단, Z키로 막으면 건너뜀)
             setTimeout(() => {
-              showNarration('💢 악당이 공격해왔어요!<br><span style="font-size:1.1rem;color:#f87171;">퀴즈를 맞혀서 방어해보세요!</span>', 1400, () => {
+              if (state.playerDefended) return; // Z키로 이미 방어됨
+              showNarration('💢 악당이 공격해왔어요!<br><span style="font-size:1.1rem;color:#f87171;">Z키로 막거나 퀴즈를 맞혀 방어하세요!</span>', 1400, () => {
+                if (state.playerDefended) return; // 내레이션 중에 Z키 눌렀을 경우
+                state.defendWindowActive = false;
                 showBattleQuiz('defend', (correct) => {
                   if (correct) {
                     showActionResult('🛡️ 방어 성공!', '#86efac', 1000, 'assets/solsol5.png', () => {

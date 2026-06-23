@@ -33,6 +33,45 @@ st.set_page_config(
 
 BASE = os.path.dirname(__file__)
 
+_PROGRESS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "progress.json")
+
+_PERSIST_MISSION_PREFIXES = ("world_clear_", "stage2_clear")
+
+def _save_progress(gs):
+    # NPC 퀴즈 ID(예: space_npc_boss)는 저장 제외 — 저장하면 재시작 후 보스가 스폰 안 됨
+    missions_to_save = [
+        m for m in gs.completed_missions
+        if m.startswith("world_clear_") or m == "stage2_clear"
+    ]
+    data = {
+        "completed_missions": missions_to_save,
+        "badges": list(gs.badges),
+        "coins": gs.coins,
+    }
+    try:
+        with open(_PROGRESS_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+    except Exception:
+        pass
+
+def _load_progress(gs):
+    if not os.path.exists(_PROGRESS_FILE):
+        return
+    try:
+        with open(_PROGRESS_FILE, encoding="utf-8") as f:
+            data = json.load(f)
+        for mid in data.get("completed_missions", []):
+            if mid not in gs.completed_missions:
+                gs.complete_mission(mid)
+        for bid in data.get("badges", []):
+            if bid not in gs.badges:
+                gs.badges = gs.badges + [bid]
+        if data.get("coins", 0) > gs.coins:
+            gs.coins = data["coins"]
+    except Exception:
+        pass
+
+
 WORLD_COLORS = {
     "dinosaur": "#22c55e",
     "space": "#6366f1",
@@ -229,6 +268,16 @@ def inject_css(world_id: str = "space"):
         div[role="tooltip"],
         div[role="tooltip"] p,
         div[role="tooltip"] span {{ color: #0d1b3e !important; background: white; }}
+
+        /* ── Toast 알림 — 흰 배경에 검은 글씨 ── */
+        [data-testid*="Toast"] *,
+        [data-testid*="toast"] *,
+        [class*="Toast"] *,
+        [class*="toast"] * {{ color: #111111 !important; }}
+        [data-testid*="Toast"],
+        [data-testid*="toast"],
+        [class*="Toast"],
+        [class*="toast"] {{ color: #111111 !important; }}
 
         /* ── Top nav — logo button ── */
         div:has(#top-nav-sentinel) ~ [data-testid="stHorizontalBlock"] > div:first-child [data-testid="stButton"] {{
@@ -1299,7 +1348,14 @@ def _handle_game_event(event: dict, gs: GameState, badge_engine: BadgeEngine):
             st.toast(f"🎉 정답! +{event.get('coins_earned',0)} 코인")
         else:
             st.toast("😅 틀렸어요. 다시 도전해봐요!")
-        st.rerun()
+        # st.rerun() 호출을 의도적으로 생략 — 즉시 rerun하면 배지 알림이 사라짐
+
+    elif etype == "STAGE2_WIN":
+        gs.coins = max(gs.coins, event.get("total_coins", gs.coins))
+        if "stage2_clear" not in gs.completed_missions:
+            gs.complete_mission("stage2_clear")
+        _post_mission_checks(gs, badge_engine)
+        _save_progress(gs)
 
     elif etype == "COIN_COLLECTED":
         gs.coins = max(gs.coins, event.get("total_coins", gs.coins))
@@ -1314,9 +1370,10 @@ def _handle_game_event(event: dict, gs: GameState, badge_engine: BadgeEngine):
         if milestone not in gs.completed_missions:
             gs.complete_mission(milestone)
         _post_mission_checks(gs, badge_engine)
+        _save_progress(gs)
         st.balloons()
         st.success(f"🏆 {world_ko} 클리어! 보스를 물리쳤어요!")
-        st.rerun()
+        # st.rerun() 제거 — 게임 도중 setVal이 오면 rerun이 게임을 리셋시킴
 
     elif etype == "GAME_OVER":
         gs.coins = event.get("final_coins", gs.coins)
@@ -1334,6 +1391,7 @@ def _handle_game_event(event: dict, gs: GameState, badge_engine: BadgeEngine):
         if milestone not in gs.completed_missions:
             gs.complete_mission(milestone)
         _post_mission_checks(gs, badge_engine)
+        _save_progress(gs)
         gs.go_to("news")
         st.rerun()
 
@@ -1781,6 +1839,10 @@ def page_news(gs: GameState):
             gs.go_to("map")
             st.rerun()
 
+    if st.button("📊 결과 리포트 보기", use_container_width=True, type="primary"):
+        gs.go_to("report")
+        st.rerun()
+
 
 # ── Page: Game Result ────────────────────────────────────────────────────────
 
@@ -2102,10 +2164,15 @@ def _render_naver_mail_btn(msg_text: str, gs=None):
     import smtplib
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(override=True)
+    except Exception:
+        pass
 
-    sender   = os.environ.get("NAVER_MAIL_USER", "").strip()
-    password = os.environ.get("NAVER_MAIL_PASS", "").strip()
-    mom_mail = os.environ.get("MOM_EMAIL", "").strip()
+    sender   = os.environ.get("NAVER_MAIL_USER", "").strip().strip('"').strip("'")
+    password = os.environ.get("NAVER_MAIL_PASS", "").strip().strip('"').strip("'")
+    mom_mail = os.environ.get("MOM_EMAIL", "").strip().strip('"').strip("'")
 
     if not sender or not password or not mom_mail:
         st.markdown(
@@ -2828,6 +2895,7 @@ def main():
     missions = load_missions()
     gs = GameState()
     badge_engine = BadgeEngine()
+    _load_progress(gs)   # 이전 세션 진행 상황 복원
 
     kick_preloads(gs)   # 뉴스·퀴즈 백그라운드 프리로드 (매 rerun마다 safe하게 호출)
 

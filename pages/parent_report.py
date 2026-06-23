@@ -438,8 +438,78 @@ def _tab_learning(gs, concepts: list, history: list, badge_engine):
             st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 
+_STAGE_CARDS_DEF = [
+    {
+        "stage": "스테이지 1",
+        "name": "빌런 격퇴 카드",
+        "enemy": "보스 빌런 처치",
+        "emoji": "🦹",
+        "img": "assets/card/blackcard.png",
+        "condition": lambda ms: any(m.startswith("world_clear_") for m in ms),
+    },
+    {
+        "stage": "스테이지 2",
+        "name": "최강 전사 카드",
+        "enemy": "최종 빌런 처치",
+        "emoji": "⚔️",
+        "img": "assets/card/villcard.png",
+        "condition": lambda ms: "stage2_clear" in ms,
+    },
+]
+
+
+def _card_b64(path: str) -> str:
+    import base64
+    try:
+        with open(path, "rb") as f:
+            return base64.b64encode(f.read()).decode()
+    except Exception:
+        return ""
+
+
 def _tab_badges(gs, badge_engine):
     from game.badge_engine import BADGES
+
+    # ── 처치한 적 카드 ─────────────────────────────────────────────
+    completed = set(gs.completed_missions)
+    st.markdown("### 🃏 처치한 적 카드")
+
+    cards_html = '<div style="display:flex;gap:20px;margin-bottom:8px;">'
+    for card in _STAGE_CARDS_DEF:
+        earned = card["condition"](completed)
+        if earned:
+            b64 = _card_b64(card["img"])
+            img_tag = (
+                f'<img src="data:image/png;base64,{b64}" '
+                f'style="width:100%;border-radius:14px;display:block;">'
+                if b64 else
+                f'<div style="font-size:2rem;text-align:center;padding:30px 0;">{card["emoji"]}</div>'
+            )
+            cards_html += (
+                f'<div style="flex:1;max-width:200px;">'
+                f'{img_tag}'
+                f'<div style="text-align:center;margin-top:8px;">'
+                f'<span style="background:rgba(255,214,10,.25);border:1.5px solid rgba(255,214,10,.5);'
+                f'border-radius:100px;padding:2px 12px;font-size:.72rem;font-weight:900;color:#FFE566;">✅ {card["stage"]} 클리어</span><br>'
+                f'<span style="font-size:.88rem;font-weight:900;color:white;margin-top:4px;display:block;">{card["name"]}</span>'
+                f'<span style="font-size:.72rem;color:rgba(255,255,255,.5);">{card["emoji"]} {card["enemy"]}</span>'
+                f'</div></div>'
+            )
+        else:
+            cards_html += (
+                f'<div style="flex:1;max-width:200px;">'
+                f'<div style="background:rgba(0,0,0,.35);border:2px dashed rgba(255,255,255,.15);'
+                f'border-radius:14px;padding:50px 16px;text-align:center;">'
+                f'<div style="font-size:2.4rem;opacity:.3;">🔒</div>'
+                f'<div style="font-size:.78rem;font-weight:800;color:rgba(255,255,255,.3);margin-top:8px;">{card["stage"]} 클리어 시 획득</div>'
+                f'</div>'
+                f'<div style="text-align:center;margin-top:8px;">'
+                f'<span style="font-size:.85rem;font-weight:800;color:rgba(255,255,255,.3);">{card["name"]}</span>'
+                f'</div></div>'
+            )
+    cards_html += '</div>'
+    st.markdown(cards_html, unsafe_allow_html=True)
+    st.divider()
 
     earned_ids = set(gs.badges)
     earned = [b for b in BADGES if b["id"] in earned_ids]
@@ -759,6 +829,22 @@ def render_parent_report(gs, scenario_generator, badge_engine, recommender=None)
         @keyframes bounce { 0%,100%{transform:translateY(0) scale(1)} 40%{transform:translateY(-16px) scale(1.05)} 60%{transform:translateY(-6px) scale(1.02)} }
         @keyframes floatY { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
         @keyframes fadeUp { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
+        /* ── Tab bar: 잘림 방지 & 균등 배분 ── */
+        [data-baseweb="tab-list"] {
+            gap: 2px !important;
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+            scrollbar-width: none;
+        }
+        [data-baseweb="tab-list"]::-webkit-scrollbar { display: none; }
+        [data-baseweb="tab"] {
+            flex: 1 1 0 !important;
+            min-width: 0 !important;
+            justify-content: center !important;
+            padding: 10px 8px !important;
+            font-size: 0.82rem !important;
+            white-space: nowrap !important;
+        }
         </style>
         """,
         unsafe_allow_html=True,
