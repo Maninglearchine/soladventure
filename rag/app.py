@@ -1,4 +1,5 @@
 import traceback
+import os
 import streamlit as st
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
@@ -8,7 +9,13 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_core.runnables import RunnablePassthrough
 from dotenv import load_dotenv
+
 load_dotenv()
+try:
+    if "OPENAI_API_KEY" in st.secrets:
+        os.environ.setdefault("OPENAI_API_KEY", st.secrets["OPENAI_API_KEY"])
+except Exception:
+    pass
 
 # =============================================
 # ✅ PDF 파일명만 여기서 수정하세요

@@ -9,6 +9,18 @@ import os
 import plotly.graph_objects as go
 import streamlit as st
 
+# ── API 키 로딩 (로컬 .env → Streamlit Cloud secrets → 환경변수) ──────────────
+try:
+    from dotenv import load_dotenv as _load_dotenv
+    _load_dotenv()
+except ImportError:
+    pass
+try:
+    if "OPENAI_API_KEY" in st.secrets:
+        os.environ.setdefault("OPENAI_API_KEY", st.secrets["OPENAI_API_KEY"])
+except Exception:
+    pass
+
 # Langchain 의존성은 선택적 — 없어도 챗봇 제외 나머지 탭은 정상 동작
 try:
     from langchain_core.prompts import ChatPromptTemplate
