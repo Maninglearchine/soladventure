@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(head *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\User\\\\Desktop\\\\soladventure-main\" -Recurse -Directory)",
+      "Bash(Select-Object -First 30)",
+      "Artifact"
+    ]
+  }
+}

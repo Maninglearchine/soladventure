@@ -38,6 +38,7 @@ _PROGRESS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "progr
 _PERSIST_MISSION_PREFIXES = ("world_clear_", "stage2_clear")
 
 def _save_progress(gs):
+    # NPC 퀴즈 ID(예: space_npc_boss)는 저장 제외 — 저장하면 재시작 후 보스가 스폰 안 됨
     missions_to_save = [
         m for m in gs.completed_missions
         if m.startswith("world_clear_") or m == "stage2_clear"

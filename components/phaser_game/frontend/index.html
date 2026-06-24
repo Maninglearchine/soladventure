@@ -661,6 +661,18 @@ function setHeight(h) {
   );
 }
 
+function showCardAcquired(imgSrc, cb) {
+  const ov  = document.getElementById('card-acquired-overlay');
+  const img = document.getElementById('ca-img');
+  const btn = document.getElementById('ca-btn');
+  img.src = imgSrc;
+  ov.style.display = 'flex';
+  btn.onclick = () => {
+    ov.style.display = 'none';
+    if (cb) cb();
+  };
+}
+
 // ═══════════════════════════════════════════════════════
 //  THEMES  (enemy names per world + npc type)
 // ═══════════════════════════════════════════════════════
