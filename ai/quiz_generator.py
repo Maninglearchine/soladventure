@@ -100,6 +100,14 @@ class QuizGenerator:
         world_ko  = WORLD_KO.get(world, world)
         diff_desc = DIFF_DESC.get(difficulty, "3지선다")
 
+        _AGE_LABEL = {
+            "young":       "초등학교 저학년(7~9세) — 매우 간단한 단어, 짧은 문장",
+            "middle":      "초등학교 고학년(10~12세) — 일상적인 금융 용어 가능",
+            "senior":      "중학생(13~15세) — 중학교 수준 금융 개념, 간단한 계산 포함 가능",
+            "elementary":  "초등학생(7~12세) — 쉬운 언어와 예시 활용",
+        }
+        age_label = _AGE_LABEL.get(age_group, "어린이(초등학생) — 쉬운 언어")
+
         stock_rule = (
             "\n- 주식·투자 관련 개념(주식이란, 주가, 배당, 분산투자, 주식 시장 등)을 어린이 눈높이로 설명할 것"
             if world == "space" else ""
@@ -109,7 +117,7 @@ class QuizGenerator:
 
 규칙:
 - 투자 수익 보장 표현 절대 금지
-- {age_group} 연령에 맞는 쉬운 언어
+- 대상 연령: {age_label}
 - 질문 안에 "{world_ko}" 배경과 "{enemy_name}" 캐릭터를 자연스럽게 포함
 - 반드시 JSON만 반환 (마크다운 코드블록 없음)
 - 난이도: {diff_desc}
@@ -158,11 +166,20 @@ JSON 형식:
     # ── Fallback ─────────────────────────────────────────────────────────────
 
     def _fallback_quiz(self, world: str, difficulty: str) -> dict:
+        import streamlit as st
         pool = [m for m in self._fallback if world in m.get("id", "")]
         if not pool:
             pool = self._fallback
         if pool:
-            m = random.choice(pool)
+            shown = st.session_state.get("_fallback_shown_ids", [])
+            shown_set = set(shown)
+            unseen = [m for m in pool if m.get("id", "") not in shown_set]
+            if not unseen:
+                st.session_state["_fallback_shown_ids"] = []
+                unseen = pool
+            m = random.choice(unseen)
+            mid = m.get("id", "")
+            st.session_state["_fallback_shown_ids"] = (shown + [mid])[-50:]
             return {
                 "question":    m.get("question", "저축이란 무엇일까요?"),
                 "choices":     m.get("choices", []),

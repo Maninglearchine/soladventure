@@ -8,13 +8,19 @@ import os
 
 import plotly.graph_objects as go
 import streamlit as st
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import FAISS
-from langchain_core.runnables import RunnablePassthrough
+
+# Langchain 의존성은 선택적 — 없어도 챗봇 제외 나머지 탭은 정상 동작
+try:
+    from langchain_core.prompts import ChatPromptTemplate
+    from langchain_core.output_parsers import StrOutputParser
+    from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+    from langchain_community.document_loaders import PyPDFLoader
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
+    from langchain_community.vectorstores import FAISS
+    from langchain_core.runnables import RunnablePassthrough
+    _LANGCHAIN_OK = True
+except ImportError:
+    _LANGCHAIN_OK = False
 
 from ui.portfolio_chart import PortfolioChart, WORLD_COLORS
 
@@ -83,6 +89,10 @@ _QUICK_QUESTIONS = [
 
 @st.cache_resource
 def _load_vectorstore(pdf_path: str):
+    if not _LANGCHAIN_OK:
+        raise RuntimeError("langchain 패키지가 설치되지 않았습니다.")
+    if not os.path.exists(pdf_path):
+        raise FileNotFoundError(f"PDF 파일을 찾을 수 없습니다: {os.path.basename(pdf_path)}")
     loader = PyPDFLoader(pdf_path)
     docs = loader.load()
     splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
@@ -275,9 +285,10 @@ def _generate_parent_text(gs, concepts: list, generator) -> str:
     if client is None:
         return _default_parent_text(gs, concepts)
 
-    age_label = {"young": "6~8세", "middle": "9~11세", "all": "12~13세"}.get(
-        gs.age_group, gs.age_group
-    )
+    age_label = {
+        "young": "6~8세", "middle": "9~11세",
+        "senior": "13세 이상", "all": "12~13세",
+    }.get(gs.age_group, gs.age_group)
     prompt = f"""
 아이({gs.character_name}, {age_label})가 핀퀘스트에서 아래 금융 개념을 배웠어요:
 {concept_names}
@@ -438,8 +449,78 @@ def _tab_learning(gs, concepts: list, history: list, badge_engine):
             st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 
+_STAGE_CARDS_DEF = [
+    {
+        "stage": "스테이지 1",
+        "name": "빌런 격퇴 카드",
+        "enemy": "보스 빌런 처치",
+        "emoji": "🦹",
+        "img": "assets/card/blackcard.png",
+        "condition": lambda ms: any(m.startswith("world_clear_") for m in ms),
+    },
+    {
+        "stage": "스테이지 2",
+        "name": "최강 전사 카드",
+        "enemy": "최종 빌런 처치",
+        "emoji": "⚔️",
+        "img": "assets/card/villcard.png",
+        "condition": lambda ms: "stage2_clear" in ms,
+    },
+]
+
+
+def _card_b64(path: str) -> str:
+    import base64
+    try:
+        with open(path, "rb") as f:
+            return base64.b64encode(f.read()).decode()
+    except Exception:
+        return ""
+
+
 def _tab_badges(gs, badge_engine):
     from game.badge_engine import BADGES
+
+    # ── 처치한 적 카드 ─────────────────────────────────────────────
+    completed = set(gs.completed_missions)
+    st.markdown("### 🃏 처치한 적 카드")
+
+    cards_html = '<div style="display:flex;gap:20px;margin-bottom:8px;">'
+    for card in _STAGE_CARDS_DEF:
+        earned = card["condition"](completed)
+        if earned:
+            b64 = _card_b64(card["img"])
+            img_tag = (
+                f'<img src="data:image/png;base64,{b64}" '
+                f'style="width:100%;border-radius:14px;display:block;">'
+                if b64 else
+                f'<div style="font-size:2rem;text-align:center;padding:30px 0;">{card["emoji"]}</div>'
+            )
+            cards_html += (
+                f'<div style="flex:1;max-width:200px;">'
+                f'{img_tag}'
+                f'<div style="text-align:center;margin-top:8px;">'
+                f'<span style="background:rgba(255,214,10,.25);border:1.5px solid rgba(255,214,10,.5);'
+                f'border-radius:100px;padding:2px 12px;font-size:.72rem;font-weight:900;color:#FFE566;">✅ {card["stage"]} 클리어</span><br>'
+                f'<span style="font-size:.88rem;font-weight:900;color:white;margin-top:4px;display:block;">{card["name"]}</span>'
+                f'<span style="font-size:.72rem;color:rgba(255,255,255,.5);">{card["emoji"]} {card["enemy"]}</span>'
+                f'</div></div>'
+            )
+        else:
+            cards_html += (
+                f'<div style="flex:1;max-width:200px;">'
+                f'<div style="background:rgba(0,0,0,.35);border:2px dashed rgba(255,255,255,.15);'
+                f'border-radius:14px;padding:50px 16px;text-align:center;">'
+                f'<div style="font-size:2.4rem;opacity:.3;">🔒</div>'
+                f'<div style="font-size:.78rem;font-weight:800;color:rgba(255,255,255,.3);margin-top:8px;">{card["stage"]} 클리어 시 획득</div>'
+                f'</div>'
+                f'<div style="text-align:center;margin-top:8px;">'
+                f'<span style="font-size:.85rem;font-weight:800;color:rgba(255,255,255,.3);">{card["name"]}</span>'
+                f'</div></div>'
+            )
+    cards_html += '</div>'
+    st.markdown(cards_html, unsafe_allow_html=True)
+    st.divider()
 
     earned_ids = set(gs.badges)
     earned = [b for b in BADGES if b["id"] in earned_ids]
@@ -557,20 +638,31 @@ def _tab_products(gs, concepts: list, generator):
     if GIFT_SHOW_QUICK_KEY not in st.session_state:
         st.session_state[GIFT_SHOW_QUICK_KEY] = True
 
-    # RAG 엔진 로드
+    # RAG 엔진 로드 (langchain 미설치 or PDF 없으면 GPT 단독 모드로 폴백)
     rag_error = None
     _llm = None
     _retriever = None
-    try:
-        with st.spinner("📄 증여 문서를 불러오는 중..."):
-            _llm = ChatOpenAI(temperature=0.2, model="gpt-4o-mini", max_tokens=1200)
-            _vs = _load_vectorstore(_RAG_PDF_PATH)
-            _retriever = _vs.as_retriever(search_type="similarity", search_kwargs={"k": 4})
-    except Exception as _e:
-        rag_error = str(_e)
+
+    if not _LANGCHAIN_OK:
+        rag_error = "langchain 패키지가 설치되지 않아 GPT 단독 모드로 동작합니다."
+    elif not os.path.exists(_RAG_PDF_PATH):
+        rag_error = f"증여 문서({os.path.basename(_RAG_PDF_PATH)})를 찾을 수 없어 GPT 단독 모드로 동작합니다."
+    else:
+        try:
+            with st.spinner("📄 증여 문서를 불러오는 중..."):
+                _llm = ChatOpenAI(temperature=0.2, model="gpt-4o-mini", max_tokens=1200)
+                _vs = _load_vectorstore(_RAG_PDF_PATH)
+                _retriever = _vs.as_retriever(search_type="similarity", search_kwargs={"k": 4})
+        except Exception as _e:
+            rag_error = str(_e)
+            # @st.cache_resource 는 예외를 캐싱하지 않지만, 명시적으로 캐시를 초기화해 재시도를 보장
+            try:
+                _load_vectorstore.clear()
+            except Exception:
+                pass
 
     if rag_error:
-        st.warning(f"⚠️ RAG 문서 로드 실패 — 기본 GPT 모드로 동작합니다.\n`{rag_error}`")
+        st.info(f"ℹ️ {rag_error}")
 
     # 채팅 히스토리 출력
     chat_history = st.session_state[GIFT_CHAT_KEY]
@@ -759,6 +851,43 @@ def render_parent_report(gs, scenario_generator, badge_engine, recommender=None)
         @keyframes bounce { 0%,100%{transform:translateY(0) scale(1)} 40%{transform:translateY(-16px) scale(1.05)} 60%{transform:translateY(-6px) scale(1.02)} }
         @keyframes floatY { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
         @keyframes fadeUp { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
+        /* ── Tab bar: 잘림 방지 & 균등 배분 ── */
+        [data-baseweb="tab-list"] {
+            gap: 2px !important;
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+            scrollbar-width: none;
+        }
+        [data-baseweb="tab-list"]::-webkit-scrollbar { display: none; }
+        [data-baseweb="tab"] {
+            flex: 1 1 0 !important;
+            min-width: 0 !important;
+            justify-content: center !important;
+            padding: 10px 8px !important;
+            font-size: 0.82rem !important;
+            white-space: nowrap !important;
+        }
+        /* ── 증여 챗봇 입력창 ── */
+        .stTextInput > div,
+        .stTextInput > div > div {
+            background-color: rgba(30,30,60,0.75) !important;
+        }
+        .stTextInput input {
+            background-color: transparent !important;
+            color: #ffffff !important;
+            border: none !important;
+        }
+        .stTextInput > div {
+            border: 1.5px solid rgba(132,94,247,0.55) !important;
+            border-radius: 12px !important;
+        }
+        .stTextInput > div:focus-within {
+            border-color: rgba(132,94,247,0.9) !important;
+            box-shadow: 0 0 0 2px rgba(132,94,247,0.25) !important;
+        }
+        .stTextInput input::placeholder {
+            color: rgba(255,255,255,0.45) !important;
+        }
         </style>
         """,
         unsafe_allow_html=True,

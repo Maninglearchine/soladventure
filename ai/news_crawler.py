@@ -22,6 +22,13 @@ HEADERS = {
     )
 }
 
+# Step 1 — 금융 키워드 필터 (title + description 검사)
+FINANCE_KEYWORDS = [
+    "돈", "용돈", "소비", "저축", "통장", "이자", "가격", "물가",
+    "환전", "투자", "주식", "금리", "환율", "경제", "은행", "세금",
+    "예금", "적금", "펀드", "채권", "금융", "대출", "부채",
+]
+
 
 def _strip_tags(text: str) -> str:
     text = re.sub(r"<[^>]+>", " ", text or "")
@@ -37,16 +44,23 @@ def _parse_rss(url: str, n: int) -> list[dict]:
     except Exception:
         return []
 
-    items = []
+    matched, others = [], []
     for item in root.iter("item"):
         title = _strip_tags(item.findtext("title", ""))
         desc  = _strip_tags(item.findtext("description", ""))
         link  = (item.findtext("link") or "").strip()
-        if title:
-            items.append({"title": title, "description": desc[:400], "link": link})
-        if len(items) >= n:
+        if not title:
+            continue
+        entry = {"title": title, "description": desc[:400], "link": link}
+        if any(kw in title + " " + desc for kw in FINANCE_KEYWORDS):
+            matched.append(entry)
+        else:
+            others.append(entry)
+        if len(matched) + len(others) >= n * 4:
             break
-    return items
+
+    # 금융 키워드 기사 우선, 없으면 전체에서 반환
+    return (matched if matched else others)[:n]
 
 
 def fetch_stock_news(n: int = 5) -> list[dict]:
@@ -69,7 +83,13 @@ def summarize_news_for_kids(
     if not articles:
         return []
 
-    age_desc = "초등학교 저학년" if age_group == "elementary" else "초등학교 고학년"
+    age_desc = {
+        "young":      "초등학교 저학년(7~9세)",
+        "middle":     "초등학교 고학년(10~12세)",
+        "senior":     "중학생(13세 이상)",
+        "all":        "어린이",
+        "elementary": "초등학교 저학년",
+    }.get(age_group, "어린이")
     article_text = "\n".join(
         f"[{i+1}] 제목: {a['title']}\n내용: {a['description']}"
         for i, a in enumerate(articles)
@@ -140,3 +160,78 @@ def get_kids_news(
     if not articles:
         return []
     return summarize_news_for_kids(articles, client, age_group, character_name)
+
+
+# ── Step 3 — 뉴스 기반 퀴즈 생성 (13세 이상 전용) ───────────────────────────
+
+def generate_news_quiz(
+    item: dict,
+    age_group: str = "senior",
+    api_key: str | None = None,
+) -> dict | None:
+    """어린이용 뉴스 아이템을 기반으로 서비스 포맷 3지선다 퀴즈를 생성한다.
+
+    item 은 summarize_news_for_kids() 가 반환한 dict:
+      {emoji, title, summary, lesson, link}
+    반환 포맷은 QuizGenerator._openai_quiz() 와 동일:
+      {question, choices[{id,text,correct,feedback,coins}], concept_card}
+    """
+    import os
+    import json
+    from dotenv import load_dotenv
+    load_dotenv()
+
+    key = api_key or os.getenv("OPENAI_API_KEY")
+    if not key:
+        return None
+
+    age_map = {
+        "young":  "초등학교 저학년(7~9세)",
+        "middle": "초등학교 고학년(10~12세)",
+        "senior": "중학생(13세 이상)",
+        "all":    "어린이",
+    }
+    age_desc = age_map.get(age_group, "중학생(13세 이상)")
+
+    content = "\n".join(filter(None, [
+        f"제목: {item.get('title', '')}",
+        f"요약: {item.get('summary', '')}",
+        f"교훈: {item.get('lesson', '')}",
+    ]))
+
+    prompt = f"""다음 금융 뉴스를 바탕으로 {age_desc}을 위한 3지선다 퀴즈를 만드세요.
+
+{content}
+
+반드시 아래 JSON 형식으로만 출력하세요:
+{{
+  "question": "퀴즈 문제 (뉴스 내용 기반, 1~2문장)",
+  "choices": [
+    {{"id":"a","text":"선택지","correct":true,"feedback":"왜 맞는지 한 문장","coins":15}},
+    {{"id":"b","text":"선택지","correct":false,"feedback":"왜 틀렸는지","coins":-5}},
+    {{"id":"c","text":"선택지","correct":false,"feedback":"왜 틀렸는지","coins":-5}}
+  ],
+  "concept_card": {{
+    "title": "오늘의 금융 개념",
+    "body": "이 뉴스에서 배울 수 있는 핵심 금융 교훈 한 문장",
+    "emoji": "관련 이모지"
+  }}
+}}
+
+choices 중 정확히 하나만 correct: true. JSON만 출력."""
+
+    try:
+        client = openai.OpenAI(api_key=key)
+        resp = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=600,
+            response_format={"type": "json_object"},
+        )
+        data = json.loads(resp.choices[0].message.content)
+        assert "question" in data
+        assert "choices" in data and len(data["choices"]) >= 2
+        assert any(c.get("correct") for c in data["choices"])
+        return data
+    except Exception:
+        return None

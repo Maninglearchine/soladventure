@@ -33,6 +33,44 @@ st.set_page_config(
 
 BASE = os.path.dirname(__file__)
 
+_PROGRESS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "progress.json")
+
+_PERSIST_MISSION_PREFIXES = ("world_clear_", "stage2_clear")
+
+def _save_progress(gs):
+    missions_to_save = [
+        m for m in gs.completed_missions
+        if m.startswith("world_clear_") or m == "stage2_clear"
+    ]
+    data = {
+        "completed_missions": missions_to_save,
+        "badges": list(gs.badges),
+        "coins": gs.coins,
+    }
+    try:
+        with open(_PROGRESS_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+    except Exception:
+        pass
+
+def _load_progress(gs):
+    if not os.path.exists(_PROGRESS_FILE):
+        return
+    try:
+        with open(_PROGRESS_FILE, encoding="utf-8") as f:
+            data = json.load(f)
+        for mid in data.get("completed_missions", []):
+            if mid not in gs.completed_missions:
+                gs.complete_mission(mid)
+        for bid in data.get("badges", []):
+            if bid not in gs.badges:
+                gs.badges = gs.badges + [bid]
+        if data.get("coins", 0) > gs.coins:
+            gs.coins = data["coins"]
+    except Exception:
+        pass
+
+
 WORLD_COLORS = {
     "dinosaur": "#22c55e",
     "space": "#6366f1",
@@ -230,6 +268,16 @@ def inject_css(world_id: str = "space"):
         div[role="tooltip"] p,
         div[role="tooltip"] span {{ color: #0d1b3e !important; background: white; }}
 
+        /* ── Toast 알림 — 흰 배경에 검은 글씨 ── */
+        [data-testid*="Toast"] *,
+        [data-testid*="toast"] *,
+        [class*="Toast"] *,
+        [class*="toast"] * {{ color: #111111 !important; }}
+        [data-testid*="Toast"],
+        [data-testid*="toast"],
+        [class*="Toast"],
+        [class*="toast"] {{ color: #111111 !important; }}
+
         /* ── Top nav — logo button ── */
         div:has(#top-nav-sentinel) ~ [data-testid="stHorizontalBlock"] > div:first-child [data-testid="stButton"] {{
             margin-top: 0 !important; z-index: auto !important;
@@ -319,7 +367,7 @@ def _inject_bgm():
             }
             var a = doc.createElement('audio');
             a.id = 'app-bgm1';
-            a.src = '/app/static/bgm1.mp3';
+            a.src = '/app/static/bgm.wav';
             a.loop = true;
             a.volume = 0.35;
             doc.body.appendChild(a);
@@ -354,6 +402,13 @@ def _post_mission_checks(gs: GameState, badge_engine: BadgeEngine):
     for badge in new_badges:
         show_badge_earned(badge)
 
+    # 미션 완료 시 자동 저장 (새로고침 후 복원 가능)
+    try:
+        from game.persistence import save_progress
+        save_progress(gs)
+    except Exception:
+        pass
+
 
 # ── Intro constants ───────────────────────────────────────────────────────────
 
@@ -384,7 +439,7 @@ def _char_icon_html(ch: dict, size: int = 80) -> str:
 AGE_GROUPS = [
     {"label": "7~9살",     "value": "young",  "emoji": "👶", "desc": "쉬운 용돈·소비 문제"},
     {"label": "10~12살",   "value": "middle", "emoji": "🧒", "desc": "저축·소비·필요와 욕구"},
-    {"label": "13살 이상", "value": "all",    "emoji": "🧑", "desc": "예산·이자·금융 선택"},
+    {"label": "13살 이상", "value": "senior", "emoji": "🧑", "desc": "예산·이자·금융 선택"},
 ]
 
 # ── Background preload cache ───────────────────────────────────────────────────
@@ -765,7 +820,7 @@ def _render_shinhan_logo_bar(step: int = 0):
     st.markdown('<div id="top-nav-sentinel"></div>', unsafe_allow_html=True)
     col_logo, col_dots, col_report, col_battle = st.columns([2, 4, 2, 2])
     with col_logo:
-        if st.button("신한은행", key=f"logo_home_{step}", use_container_width=False):
+        if st.button("🏠 처음으로 돌아가기", key=f"logo_home_{step}", use_container_width=False):
             st.session_state["intro_step"] = 0
             st.rerun()
     with col_dots:
@@ -790,7 +845,7 @@ def _render_top_nav(gs: GameState):
     st.markdown('<div id="top-nav-sentinel"></div>', unsafe_allow_html=True)
     col_logo, col_w, col_a, col_s, col_p, col_btn = st.columns([3, 1, 1, 1, 1, 2])
     with col_logo:
-        if st.button("신한은행", key="top_nav_home", use_container_width=False):
+        if st.button("🏠 처음으로 돌아가기", key="top_nav_home", use_container_width=False):
             gs.go_to("onboarding")
             st.session_state["intro_step"] = 0
             st.rerun()
@@ -1058,6 +1113,14 @@ def _intro_step1_age(gs: GameState):
     age_cards_html = ""
     for i, ag in enumerate(AGE_GROUPS):
         icon = age_icons[i] or f'<div style="font-size:3.4rem;margin-bottom:10px;filter:drop-shadow(0 0 10px rgba(255,214,10,.5));">{ag["emoji"]}</div>'
+        ai_badge = (
+            '<div style="margin-top:11px;display:inline-flex;align-items:center;gap:5px;'
+            'background:linear-gradient(135deg,rgba(99,102,241,.35),rgba(168,85,247,.25));'
+            'border:1.5px solid rgba(168,85,247,.6);border-radius:100px;'
+            'padding:5px 11px;font-size:.7rem;font-weight:900;color:#c4b5fd;'
+            'letter-spacing:.03em;animation:pulse 2s ease-in-out infinite;">'
+            '🤖 AI 퀴즈 생성!</div>'
+        ) if i == 2 else ""
         age_cards_html += (
             f'<div class="fq-card" onclick="selectAge(\'{ag["label"]}\')"'
             f' style="cursor:pointer;background:linear-gradient(160deg,rgba(255,255,255,.12),'
@@ -1071,6 +1134,7 @@ def _intro_step1_age(gs: GameState):
             + f'<h3 style="color:#FFE566;margin:0 0 6px;font-size:1.12rem;font-weight:900;letter-spacing:-.2px;text-shadow:0 0 12px rgba(255,214,10,.5);">{ag["label"]}</h3>'
             + f'<div style="width:36px;height:3px;background:linear-gradient(90deg,#FFD60A,transparent);border-radius:100px;margin:0 auto 10px;"></div>'
             + f'<p style="color:rgba(255,255,255,.7);font-size:.82rem;margin:0;line-height:1.65;">{ag["desc"]}</p>'
+            + ai_badge
             + '</div>'
         )
 
@@ -1253,6 +1317,12 @@ def _intro_step3_finale(gs: GameState):
             saved_age   = gs.age_group
             saved_world = gs.world
             st.session_state["intro_step"] = 0
+            # 이전 저장 파일 삭제 후 초기화 (새 게임 시작)
+            try:
+                from game.persistence import delete_save
+                delete_save()
+            except Exception:
+                pass
             gs.reset()
             gs.character_name = saved_name
             gs.age_group      = saved_age
@@ -1299,7 +1369,14 @@ def _handle_game_event(event: dict, gs: GameState, badge_engine: BadgeEngine):
             st.toast(f"🎉 정답! +{event.get('coins_earned',0)} 코인")
         else:
             st.toast("😅 틀렸어요. 다시 도전해봐요!")
-        st.rerun()
+        # st.rerun() 호출을 의도적으로 생략 — 즉시 rerun하면 배지 알림이 사라짐
+
+    elif etype == "STAGE2_WIN":
+        gs.coins = max(gs.coins, event.get("total_coins", gs.coins))
+        if "stage2_clear" not in gs.completed_missions:
+            gs.complete_mission("stage2_clear")
+        _post_mission_checks(gs, badge_engine)
+        _save_progress(gs)
 
     elif etype == "COIN_COLLECTED":
         gs.coins = max(gs.coins, event.get("total_coins", gs.coins))
@@ -1314,9 +1391,10 @@ def _handle_game_event(event: dict, gs: GameState, badge_engine: BadgeEngine):
         if milestone not in gs.completed_missions:
             gs.complete_mission(milestone)
         _post_mission_checks(gs, badge_engine)
+        _save_progress(gs)
         st.balloons()
         st.success(f"🏆 {world_ko} 클리어! 보스를 물리쳤어요!")
-        st.rerun()
+        # st.rerun() 제거 — 게임 도중 setVal이 오면 rerun이 게임을 리셋시킴
 
     elif etype == "GAME_OVER":
         gs.coins = event.get("final_coins", gs.coins)
@@ -1334,6 +1412,7 @@ def _handle_game_event(event: dict, gs: GameState, badge_engine: BadgeEngine):
         if milestone not in gs.completed_missions:
             gs.complete_mission(milestone)
         _post_mission_checks(gs, badge_engine)
+        _save_progress(gs)
         gs.go_to("news")
         st.rerun()
 
@@ -1401,14 +1480,22 @@ def page_map(
         battle_test=battle_test,
     )
 
-    # Deduplicate: after st.rerun() the component returns the same last value;
-    # use the ts timestamp to skip events that were already processed.
+    # ── Event deduplication ───────────────────────────────────────────────────
+    # Phaser component re-emits the last value on every st.rerun().
+    # Guard with a compound key (ts + type + mission_id) stored as a bounded
+    # list so two rapid-fire events with the same ts are still distinguished.
     if result:
-        ev_ts = result.get("ts")
-        if ev_ts and ev_ts == st.session_state.get("_last_ev_ts"):
-            result = None
-        elif ev_ts:
-            st.session_state["_last_ev_ts"] = ev_ts
+        ev_key = "{}|{}|{}".format(
+            result.get("ts", 0),
+            result.get("type", ""),
+            result.get("mission_id", ""),
+        )
+        _done = st.session_state.get("_processed_ev", [])
+        if ev_key in _done:
+            result = None  # already handled on a previous run
+        else:
+            # Keep list bounded to last 40 events
+            st.session_state["_processed_ev"] = (_done + [ev_key])[-40:]
 
     if result:
         _handle_game_event(result, gs, badge_engine)
@@ -1745,8 +1832,10 @@ def page_news(gs: GameState):
                     st.error(f"뉴스를 불러오지 못했어요. 잠시 후 다시 시도해줘요! ({e})")
                     news_items = []
 
+    is_senior = (gs.age_group == "senior")
+
     if news_items:
-        for item in news_items:
+        for i, item in enumerate(news_items):
             link_html = (
                 f'<div class="news-link"><a href="{item["link"]}" target="_blank" rel="noopener">🔗 원문 기사 보기</a></div>'
                 if item.get("link") else ""
@@ -1763,6 +1852,90 @@ def page_news(gs: GameState):
                 '</div>',
                 unsafe_allow_html=True,
             )
+
+            # ── Step 3: 뉴스 기반 퀴즈 (13세 이상 전용) ──────────────────────
+            if is_senior:
+                _quiz_open    = st.session_state.get("_news_quiz_open")
+                _ans_key      = f"_news_quiz_ans_{i}"
+                _data_key     = f"_news_quiz_data_{i}"
+
+                if _quiz_open == i:
+                    quiz = st.session_state.get(_data_key)
+                    if quiz is None:
+                        with st.spinner("🤖 AI가 퀴즈를 만들고 있어요..."):
+                            _api_key = (
+                                st.session_state.get("openai_api_key")
+                                or os.environ.get("OPENAI_API_KEY")
+                            )
+                            from ai.news_crawler import generate_news_quiz
+                            quiz = generate_news_quiz(item, gs.age_group, api_key=_api_key)
+                            if quiz:
+                                st.session_state[_data_key] = quiz
+
+                    if quiz:
+                        st.markdown(
+                            '<div style="background:rgba(99,102,241,.12);border:1.5px solid rgba(168,85,247,.45);'
+                            'border-radius:16px;padding:16px 20px;margin-bottom:8px;">'
+                            f'<div style="font-size:.82rem;font-weight:900;color:#c4b5fd;margin-bottom:8px;">🤖 AI 퀴즈</div>'
+                            f'<div style="font-size:.97rem;font-weight:800;color:white;line-height:1.6;">'
+                            f'{quiz["question"]}</div>'
+                            '</div>',
+                            unsafe_allow_html=True,
+                        )
+                        answered = st.session_state.get(_ans_key)
+                        if not answered:
+                            q_cols = st.columns(len(quiz["choices"]))
+                            for j, choice in enumerate(quiz["choices"]):
+                                with q_cols[j]:
+                                    _markers = ['①','②','③','④']
+                                    btn_label = f"{_markers[j] if j < len(_markers) else str(j+1)} {choice['text']}"
+                                    if st.button(btn_label, key=f"_nq_{i}_{j}", use_container_width=True):
+                                        st.session_state[_ans_key] = choice
+                                        gs.add_coins(
+                                            choice.get("coins", -5),
+                                            f"뉴스퀴즈 {'정답' if choice.get('correct') else '오답'}",
+                                        )
+                                        st.rerun()
+                        else:
+                            is_correct = answered.get("correct", False)
+                            coins      = answered.get("coins", -5)
+                            bg_rgb     = "6,214,160" if is_correct else "239,71,111"
+                            icon_      = "🎉" if is_correct else "😢"
+                            label_     = "정답!" if is_correct else "오답!"
+                            st.markdown(
+                                f'<div style="background:rgba({bg_rgb},.15);border:1.5px solid rgba({bg_rgb},.45);'
+                                f'border-radius:12px;padding:14px 18px;margin-bottom:8px;">'
+                                f'<span style="color:{"#06D6A0" if is_correct else "#EF476F"};font-weight:900;">'
+                                f'{icon_} {label_}</span> '
+                                f'<span style="color:white;">{"+" if coins > 0 else ""}{coins}코인</span><br>'
+                                f'<span style="color:rgba(255,255,255,.8);font-size:.88rem;">'
+                                f'{answered.get("feedback","")}</span></div>',
+                                unsafe_allow_html=True,
+                            )
+                            cc = quiz.get("concept_card", {})
+                            if cc:
+                                st.markdown(
+                                    f'<div style="background:rgba(255,209,102,.1);border:1.5px solid rgba(255,209,102,.35);'
+                                    f'border-radius:12px;padding:12px 18px;margin-bottom:10px;">'
+                                    f'{cc.get("emoji","💡")} '
+                                    f'<strong style="color:#FFD166;">{cc.get("title","")}</strong>'
+                                    f' — <span style="color:rgba(255,255,255,.8);font-size:.88rem;">'
+                                    f'{cc.get("body","")}</span></div>',
+                                    unsafe_allow_html=True,
+                                )
+                            if st.button("✅ 퀴즈 닫기", key=f"_nq_close_{i}"):
+                                st.session_state.pop("_news_quiz_open", None)
+                                st.rerun()
+                    else:
+                        st.warning("API 키가 없거나 퀴즈를 생성하지 못했어요.")
+                        if st.button("닫기", key=f"_nq_err_{i}"):
+                            st.session_state.pop("_news_quiz_open", None)
+                            st.rerun()
+                else:
+                    if st.button("🤖 AI 퀴즈 풀기", key=f"_nq_open_{i}"):
+                        st.session_state["_news_quiz_open"] = i
+                        st.session_state.pop(_ans_key, None)
+                        st.rerun()
     else:
         st.info("현재 뉴스를 불러올 수 없어요. 잠시 후 다시 시도해주세요!")
 
@@ -1780,6 +1953,10 @@ def page_news(gs: GameState):
         if st.button("🗺️ 계속 탐험하기", use_container_width=True):
             gs.go_to("map")
             st.rerun()
+
+    if st.button("📊 결과 리포트 보기", use_container_width=True, type="primary"):
+        gs.go_to("report")
+        st.rerun()
 
 
 # ── Page: Game Result ────────────────────────────────────────────────────────
@@ -2102,10 +2279,15 @@ def _render_naver_mail_btn(msg_text: str, gs=None):
     import smtplib
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(override=True)
+    except Exception:
+        pass
 
-    sender   = os.environ.get("NAVER_MAIL_USER", "").strip()
-    password = os.environ.get("NAVER_MAIL_PASS", "").strip()
-    mom_mail = os.environ.get("MOM_EMAIL", "").strip()
+    sender   = os.environ.get("NAVER_MAIL_USER", "").strip().strip('"').strip("'")
+    password = os.environ.get("NAVER_MAIL_PASS", "").strip().strip('"').strip("'")
+    mom_mail = os.environ.get("MOM_EMAIL", "").strip().strip('"').strip("'")
 
     if not sender or not password or not mom_mail:
         st.markdown(
@@ -2788,11 +2970,7 @@ def page_products(gs: GameState):
             f'</div>',
             unsafe_allow_html=True,
         )
-        if st.button(f"🔗 {p['name']} 자세히 보기", key=f"pd_{p['id']}", use_container_width=True):
-            st.markdown(
-                f'<script>window.open("{p["link"]}", "_blank")</script>',
-                unsafe_allow_html=True,
-            )
+        st.link_button(f"🔗 {p['name']} 자세히 보기", p["link"], use_container_width=True)
 
     st.divider()
     st.markdown('<p style="color:rgba(255,255,255,.6);font-size:.88rem;font-weight:700;margin:0 0 10px;">📌 알아두면 좋아요!</p>', unsafe_allow_html=True)
@@ -2824,10 +3002,18 @@ def page_products(gs: GameState):
 # ── Router ────────────────────────────────────────────────────────────────────
 
 def main():
+    # 새로고침 후 진행 데이터 복원 (URL sid 기반)
+    try:
+        from game.persistence import try_restore
+        try_restore()
+    except Exception:
+        pass
+
     worlds = load_worlds()
     missions = load_missions()
     gs = GameState()
     badge_engine = BadgeEngine()
+    _load_progress(gs)   # 이전 세션 진행 상황 복원
 
     kick_preloads(gs)   # 뉴스·퀴즈 백그라운드 프리로드 (매 rerun마다 safe하게 호출)
 

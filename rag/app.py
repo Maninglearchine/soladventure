@@ -121,6 +121,38 @@ def init_page():
     set_background("background.png", opacity=0.2)
     # =============================================
 
+    # chat input / message 색상 강제 지정 (흰 배경에서 안 보이는 문제 해결)
+    st.markdown(
+        """
+        <style>
+        /* 채팅 입력창 */
+        [data-testid="stChatInput"] textarea,
+        [data-testid="stChatInputTextArea"] {
+            background-color: #ffffff !important;
+            color: #111111 !important;
+            border: 1.5px solid #4a90d9 !important;
+        }
+        [data-testid="stChatInput"] textarea::placeholder {
+            color: #888888 !important;
+        }
+        /* 사용자 채팅 말풍선 */
+        [data-testid="stChatMessage"] p,
+        [data-testid="stChatMessage"] span,
+        [data-testid="stChatMessage"] li {
+            color: #111111 !important;
+        }
+        /* 어시스턴트 말풍선 배경 */
+        [data-testid="stChatMessage"][aria-label*="assistant"] > div:first-child,
+        [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) .stMarkdown {
+            background-color: rgba(232, 244, 253, 0.92) !important;
+            border-radius: 8px;
+            padding: 8px;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
     # 항상 상단에 고정되는 안내 배너
     st.markdown(
         """
