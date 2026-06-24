@@ -1275,7 +1275,7 @@ def _intro_step3_finale(gs: GameState):
     world_info = next((w for w in INTRO_WORLDS if w["id"] == gs.world), INTRO_WORLDS[0])
     c = world_info["color"]
     extra_line = (
-        '<br>주식·투자 퀴즈를 풀고 최신 주식 뉴스도 확인해봐! 📈'
+        '<br>주식·투자 퀴즈를 풀고 오늘의 금융·경제 뉴스도 확인해봐! 📈'
         if world_info["id"] == "space" else ""
     )
 
@@ -1741,7 +1741,7 @@ def page_news(gs: GameState):
         st.divider()
         col1, col2, col3 = st.columns(3)
         with col1:
-            if st.button("📰 뉴스 보기", use_container_width=True):
+            if st.button("📰 오늘의 금융, 경제 뉴스 보기", use_container_width=True):
                 st.session_state.pop("show_donyo", None)
                 st.rerun()
         with col2:
@@ -1803,7 +1803,7 @@ def page_news(gs: GameState):
 
     st.markdown(
         '<div style="padding:12px 0 8px;text-align:center;">'
-        '<h2 style="color:white;font-size:2rem;font-weight:900;letter-spacing:-.6px;margin:0 0 8px;">📰 오늘의 주식 뉴스</h2>'
+        '<h2 style="color:white;font-size:2rem;font-weight:900;letter-spacing:-.6px;margin:0 0 8px;">📰 오늘의 금융·경제 뉴스</h2>'
         '<p style="color:rgba(255,255,255,.65);font-size:.96rem;margin:0;">쏠쏠이가 어린이도 이해하기 쉽게 설명해줄게요! 🌟</p>'
         '</div>',
         unsafe_allow_html=True,
@@ -2548,7 +2548,7 @@ def page_word_of_day(gs: GameState):
             gs.go_to("map")
             st.rerun()
     with col2:
-        if st.button("📰 주식 뉴스 보기", use_container_width=True, type="primary"):
+        if st.button("📰 오늘의 금융, 경제 뉴스 보기", use_container_width=True, type="primary"):
             gs.go_to("news")
             st.rerun()
 

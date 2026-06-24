@@ -96,7 +96,7 @@ def summarize_news_for_kids(
     )
 
     prompt = f"""너는 어린이 금융 교육 캐릭터 {character_name}야.
-아래 한국 주식 뉴스 {len(articles)}개를 {age_desc} 어린이도 이해할 수 있게 쉽고 재미있게 설명해줘.
+아래 한국 금융·경제 뉴스 {len(articles)}개를 {age_desc} 어린이도 이해할 수 있게 쉽고 재미있게 설명해줘.
 
 각 뉴스마다 JSON 배열 원소 하나를 만들어:
 {{
