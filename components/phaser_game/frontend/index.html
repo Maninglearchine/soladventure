@@ -498,7 +498,7 @@ body { background: #111; overflow: hidden; font-family: 'Segoe UI Emoji', 'Apple
     <div id="vid-btn-row">
       <button id="btn-stage2" class="vid-action-btn" style="display:none">⚔️ 다음 스테이지</button>
       <button id="btn-donyo" class="vid-action-btn" style="display:none">🎵 동요배우기</button>
-      <button id="btn-news"  class="vid-action-btn" style="display:none">📰 주식 뉴스 보기</button>
+      <button id="btn-news"  class="vid-action-btn" style="display:none">📰 오늘의 금융, 경제 뉴스 보기</button>
       <button id="btn-report" class="vid-action-btn" style="display:none">📊 리포트 보기 →</button>
     </div>
   </div>
@@ -2635,6 +2635,63 @@ function startBattleGame(onComplete) {
   }
   requestAnimationFrame(loop);
 }
+</script>
+
+<script>
+/* ── 전역 버튼 효과음 (hover + click) ─────────────────────────────── */
+(function () {
+  let _ctx = null;
+  function getCtx() {
+    if (!_ctx) _ctx = new (window.AudioContext || window.webkitAudioContext)();
+    return _ctx;
+  }
+
+  function playTone(freq, duration, gainVal, type) {
+    try {
+      const ctx  = getCtx();
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.value = freq;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      gain.gain.setValueAtTime(gainVal, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + duration);
+    } catch (e) {}
+  }
+
+  // hover: 짧고 부드러운 틱
+  function hoverSound() { playTone(880, 0.06, 0.07, 'sine'); }
+  // click: 약간 낮고 선명한 클릭감
+  function clickSound() {
+    playTone(660, 0.04, 0.12, 'square');
+    setTimeout(() => playTone(880, 0.05, 0.08, 'sine'), 40);
+  }
+
+  const BTN_SEL = 'button, .quiz-btn, .vid-action-btn, .ca-btn, .bc-btn, #wc-btn, #quiz-escape-btn';
+
+  function attachSounds(root) {
+    root.querySelectorAll(BTN_SEL).forEach(el => {
+      if (el._sfxBound) return;
+      el._sfxBound = true;
+      el.addEventListener('mouseenter', hoverSound);
+      el.addEventListener('pointerdown', clickSound);
+    });
+  }
+
+  // 초기 바인딩
+  document.addEventListener('DOMContentLoaded', () => attachSounds(document));
+
+  // 동적으로 생성되는 버튼도 처리
+  const obs = new MutationObserver(muts => {
+    muts.forEach(m => m.addedNodes.forEach(n => {
+      if (n.nodeType === 1) attachSounds(n.matches?.(BTN_SEL) ? n.parentElement : n);
+    }));
+  });
+  obs.observe(document.body, { childList: true, subtree: true });
+})();
 </script>
 </body>
 </html>
