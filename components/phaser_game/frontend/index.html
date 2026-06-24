@@ -2638,59 +2638,57 @@ function startBattleGame(onComplete) {
 </script>
 
 <script>
-/* ── 전역 버튼 효과음 (hover + click) ─────────────────────────────── */
+/* ── 전역 버튼 효과음 — 이벤트 위임 방식 (동적 버튼 포함 전체 적용) ── */
 (function () {
   let _ctx = null;
   function getCtx() {
     if (!_ctx) _ctx = new (window.AudioContext || window.webkitAudioContext)();
     return _ctx;
   }
-
-  function playTone(freq, duration, gainVal, type) {
+  function tone(freq, dur, vol, type) {
     try {
-      const ctx  = getCtx();
-      const osc  = ctx.createOscillator();
-      const gain = ctx.createGain();
+      const ctx = getCtx();
+      const osc = ctx.createOscillator();
+      const g   = ctx.createGain();
       osc.type = type || 'sine';
       osc.frequency.value = freq;
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      gain.gain.setValueAtTime(gainVal, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + duration);
-    } catch (e) {}
+      osc.connect(g); g.connect(ctx.destination);
+      g.gain.setValueAtTime(vol, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+      osc.start(); osc.stop(ctx.currentTime + dur);
+    } catch (_) {}
+  }
+  function hoverSfx() { tone(900, 0.055, 0.06, 'sine'); }
+  function clickSfx() {
+    tone(600, 0.035, 0.13, 'square');
+    setTimeout(() => tone(900, 0.055, 0.07, 'sine'), 35);
   }
 
-  // hover: 짧고 부드러운 틱
-  function hoverSound() { playTone(880, 0.06, 0.07, 'sine'); }
-  // click: 약간 낮고 선명한 클릭감
-  function clickSound() {
-    playTone(660, 0.04, 0.12, 'square');
-    setTimeout(() => playTone(880, 0.05, 0.08, 'sine'), 40);
+  // 클릭 대상이 버튼(또는 버튼 내부 요소)인지 가장 가까운 버튼 조상 반환
+  function nearestBtn(el) {
+    while (el && el !== document.body) {
+      if (el.tagName === 'BUTTON' ||
+          el.classList.contains('quiz-btn') ||
+          el.classList.contains('vid-action-btn') ||
+          el.classList.contains('ca-btn') ||
+          el.classList.contains('bc-btn')) return el;
+      el = el.parentElement;
+    }
+    return null;
   }
 
-  const BTN_SEL = 'button, .quiz-btn, .vid-action-btn, .ca-btn, .bc-btn, #wc-btn, #quiz-escape-btn';
+  // hover: mouseover 이용 — relatedTarget이 같은 버튼 내부일 때는 무시
+  document.addEventListener('mouseover', function (e) {
+    const btn = nearestBtn(e.target);
+    if (!btn) return;
+    const from = nearestBtn(e.relatedTarget);
+    if (from !== btn) hoverSfx();
+  }, true);
 
-  function attachSounds(root) {
-    root.querySelectorAll(BTN_SEL).forEach(el => {
-      if (el._sfxBound) return;
-      el._sfxBound = true;
-      el.addEventListener('mouseenter', hoverSound);
-      el.addEventListener('pointerdown', clickSound);
-    });
-  }
-
-  // 초기 바인딩
-  document.addEventListener('DOMContentLoaded', () => attachSounds(document));
-
-  // 동적으로 생성되는 버튼도 처리
-  const obs = new MutationObserver(muts => {
-    muts.forEach(m => m.addedNodes.forEach(n => {
-      if (n.nodeType === 1) attachSounds(n.matches?.(BTN_SEL) ? n.parentElement : n);
-    }));
-  });
-  obs.observe(document.body, { childList: true, subtree: true });
+  // click: pointerdown 이용 — 모든 포인터 입력(마우스·터치) 포함
+  document.addEventListener('pointerdown', function (e) {
+    if (nearestBtn(e.target)) clickSfx();
+  }, true);
 })();
 </script>
 </body>
