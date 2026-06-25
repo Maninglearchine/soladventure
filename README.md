@@ -103,3 +103,7 @@ finquest/
     └── portfolio_chart.py         # Plotly 차트 모음
 ```
 # soladventure
+
+---
+
+> Last updated: 2026-06-25 (GitHub MCP 테스트)
