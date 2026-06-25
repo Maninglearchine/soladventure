@@ -18,8 +18,11 @@ except Exception:
     pass
 
 # =============================================
-# ✅ PDF 파일명만 여기서 수정하세요
-PDF_FILE_PATH = "증여법관련.pdf"
+# ✅ 참조할 PDF 파일 목록 (rag/ 폴더 기준 상대경로)
+PDF_FILES = [
+    "증여법관련.pdf",
+    "상속세 및 증여세법 시행령(대통령령)(제36131호).pdf",
+]
 # =============================================
 
 # Step 1: PDF 문서 기반 답변 시도
@@ -73,13 +76,15 @@ QUICK_QUESTIONS = [
 
 
 @st.cache_resource
-def load_vectorstore(pdf_path: str):
-    loader = PyPDFLoader(pdf_path)
-    docs = loader.load()
-    splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
-    splits = splitter.split_documents(docs)
+def load_vectorstore(pdf_paths: tuple):
+    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    all_splits = []
+    for path in pdf_paths:
+        loader = PyPDFLoader(path)
+        docs = loader.load()
+        all_splits.extend(splitter.split_documents(docs))
     embeddings = OpenAIEmbeddings()
-    vectorstore = FAISS.from_documents(splits, embeddings)
+    vectorstore = FAISS.from_documents(all_splits, embeddings)
     return vectorstore
 
 
@@ -262,15 +267,16 @@ def main():
 
     with st.spinner("📄 PDF 문서를 불러오는 중..."):
         try:
-            vectorstore = load_vectorstore(PDF_FILE_PATH)
+            vectorstore = load_vectorstore(tuple(PDF_FILES))
             retriever = vectorstore.as_retriever(
                 search_type="similarity", search_kwargs={"k": 4}
             )
             rag_chain = build_rag_chain(llm, retriever)
             gpt_fallback_chain = build_gpt_fallback_chain(llm)
-            st.sidebar.success(f"✅ 문서 로드 완료\n`{PDF_FILE_PATH}`")
-        except FileNotFoundError:
-            st.error(f"❌ PDF 파일을 찾을 수 없습니다: `{PDF_FILE_PATH}`\n\n상단 `PDF_FILE_PATH` 변수를 수정해주세요.")
+            st.sidebar.success(f"✅ 문서 로드 완료 ({len(PDF_FILES)}개)\n" +
+                               "\n".join(f"• `{f}`" for f in PDF_FILES))
+        except FileNotFoundError as e:
+            st.error(f"❌ PDF 파일을 찾을 수 없습니다: {e}\n\n`PDF_FILES` 목록을 확인해주세요.")
             st.stop()
         except Exception as e:
             st.error(f"❌ 오류 발생:\n```\n{traceback.format_exc()}\n```")

@@ -40,7 +40,10 @@ BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # ── RAG 설정 ─────────────────────────────────────────────────────────────────
 
-_RAG_PDF_PATH = os.path.join(BASE, "rag", "증여법관련.pdf")
+_RAG_PDF_PATHS = (
+    os.path.join(BASE, "rag", "증여법관련.pdf"),
+    os.path.join(BASE, "rag", "상속세 및 증여세법 시행령(대통령령)(제36131호).pdf"),
+)
 
 _RAG_PROMPT = """
 당신은 대한민국 자산 증여 전문 상담사입니다.
@@ -100,16 +103,18 @@ _QUICK_QUESTIONS = [
 
 
 @st.cache_resource
-def _load_vectorstore(pdf_path: str):
+def _load_vectorstore(pdf_paths: tuple):
     if not _LANGCHAIN_OK:
         raise RuntimeError("langchain 패키지가 설치되지 않았습니다.")
-    if not os.path.exists(pdf_path):
-        raise FileNotFoundError(f"PDF 파일을 찾을 수 없습니다: {os.path.basename(pdf_path)}")
-    loader = PyPDFLoader(pdf_path)
-    docs = loader.load()
-    splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
-    splits = splitter.split_documents(docs)
-    vectorstore = FAISS.from_documents(splits, OpenAIEmbeddings())
+    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    all_splits = []
+    for pdf_path in pdf_paths:
+        if not os.path.exists(pdf_path):
+            raise FileNotFoundError(f"PDF 파일을 찾을 수 없습니다: {os.path.basename(pdf_path)}")
+        loader = PyPDFLoader(pdf_path)
+        docs = loader.load()
+        all_splits.extend(splitter.split_documents(docs))
+    vectorstore = FAISS.from_documents(all_splits, OpenAIEmbeddings())
     return vectorstore
 
 
@@ -131,12 +136,20 @@ def _answer_with_rag(retriever, llm, question: str):
         for d in docs
         if d.metadata.get("page") is not None
     ))
-    pdf_name = os.path.basename(_RAG_PDF_PATH)
+    # 출처 파일명: 메타데이터에 source 있으면 그것, 없으면 첫 번째 PDF 기준
+    source_file = None
+    for d in docs:
+        src = d.metadata.get("source") or d.metadata.get("file_path")
+        if src:
+            source_file = os.path.basename(src)
+            break
+    if not source_file:
+        source_file = os.path.basename(_RAG_PDF_PATHS[0])
     if pages:
         page_str = ", ".join(f"{p}p" for p in pages)
-        source_line = f"\n\n📎 **출처:** {pdf_name} ({page_str})"
+        source_line = f"\n\n📎 **출처:** {source_file} ({page_str})"
     else:
-        source_line = f"\n\n📎 **출처:** {pdf_name}"
+        source_line = f"\n\n📎 **출처:** {source_file}"
 
     return response + source_line, True
 
@@ -655,19 +668,20 @@ def _tab_products(gs, concepts: list, generator):
     _llm = None
     _retriever = None
 
+    missing = [p for p in _RAG_PDF_PATHS if not os.path.exists(p)]
     if not _LANGCHAIN_OK:
         rag_error = "langchain 패키지가 설치되지 않아 GPT 단독 모드로 동작합니다."
-    elif not os.path.exists(_RAG_PDF_PATH):
-        rag_error = f"증여 문서({os.path.basename(_RAG_PDF_PATH)})를 찾을 수 없어 GPT 단독 모드로 동작합니다."
+    elif missing:
+        names = ", ".join(os.path.basename(p) for p in missing)
+        rag_error = f"증여 문서({names})를 찾을 수 없어 GPT 단독 모드로 동작합니다."
     else:
         try:
             with st.spinner("📄 증여 문서를 불러오는 중..."):
                 _llm = ChatOpenAI(temperature=0.2, model="gpt-4o-mini", max_tokens=1200)
-                _vs = _load_vectorstore(_RAG_PDF_PATH)
+                _vs = _load_vectorstore(_RAG_PDF_PATHS)
                 _retriever = _vs.as_retriever(search_type="similarity", search_kwargs={"k": 4})
         except Exception as _e:
             rag_error = str(_e)
-            # @st.cache_resource 는 예외를 캐싱하지 않지만, 명시적으로 캐시를 초기화해 재시도를 보장
             try:
                 _load_vectorstore.clear()
             except Exception:
