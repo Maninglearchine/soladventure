@@ -1,6 +1,5 @@
 # 신한 키즈 금융 놀이터 — PRD (Product Requirements Document)
 
-**역기획 방식 PRD** | 작성일: 2026-06-26 | 기반: 실제 구현 소스코드
 
 ---
 
