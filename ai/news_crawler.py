@@ -1,5 +1,6 @@
 """
 Korean stock news crawler + child-friendly summarizer (OpenAI).
+KoBERT 기반 어린이 적합성 필터 적용 (maninglearchine/kobert-article-classifier)
 """
 
 import xml.etree.ElementTree as ET
@@ -22,12 +23,40 @@ HEADERS = {
     )
 }
 
-# Step 1 — 금융 키워드 필터 (title + description 검사)
-FINANCE_KEYWORDS = [
-    "돈", "용돈", "소비", "저축", "통장", "이자", "가격", "물가",
-    "환전", "투자", "주식", "금리", "환율", "경제", "은행", "세금",
-    "예금", "적금", "펀드", "채권", "금융", "대출", "부채",
-]
+# KoBERT 분류기 싱글톤 (최초 호출 시 1회만 로드)
+_kobert_classifier = None
+KOBERT_MODEL_ID = "maninglearchine/kobert-article-classifier"
+KOBERT_MAX_LEN  = 64
+
+
+def _get_kobert():
+    global _kobert_classifier
+    if _kobert_classifier is None:
+        try:
+            from transformers import pipeline as hf_pipeline
+            _kobert_classifier = hf_pipeline(
+                "text-classification",
+                model=KOBERT_MODEL_ID,
+                device=-1,          # CPU
+                truncation=True,
+                max_length=KOBERT_MAX_LEN,
+            )
+        except Exception as e:
+            print(f"[KoBERT] 모델 로드 실패, 필터 비활성화: {e}")
+            _kobert_classifier = None
+    return _kobert_classifier
+
+
+def _is_child_appropriate(title: str, description: str) -> bool:
+    """KoBERT로 기사가 어린이 교육 목적에 적합한지 판별한다.
+    모델 로드 실패 시 True를 반환해 기존 흐름을 유지한다.
+    """
+    clf = _get_kobert()
+    if clf is None:
+        return True  # fallback: 필터 없이 통과
+    text = f"{title} {description}"[:200]
+    result = clf(text)[0]
+    return result["label"] == "적절"
 
 
 def _strip_tags(text: str) -> str:
@@ -37,6 +66,7 @@ def _strip_tags(text: str) -> str:
 
 
 def _parse_rss(url: str, n: int) -> list[dict]:
+    """RSS에서 기사를 수집한다. 키워드 필터 없이 전체 반환."""
     try:
         resp = requests.get(url, headers=HEADERS, timeout=8)
         resp.raise_for_status()
@@ -44,34 +74,41 @@ def _parse_rss(url: str, n: int) -> list[dict]:
     except Exception:
         return []
 
-    matched, others = [], []
+    articles = []
     for item in root.iter("item"):
         title = _strip_tags(item.findtext("title", ""))
         desc  = _strip_tags(item.findtext("description", ""))
         link  = (item.findtext("link") or "").strip()
         if not title:
             continue
-        entry = {"title": title, "description": desc[:400], "link": link}
-        if any(kw in title + " " + desc for kw in FINANCE_KEYWORDS):
-            matched.append(entry)
-        else:
-            others.append(entry)
-        if len(matched) + len(others) >= n * 4:
+        articles.append({"title": title, "description": desc[:400], "link": link})
+        if len(articles) >= n:
             break
 
-    # 금융 키워드 기사 우선, 없으면 전체에서 반환
-    return (matched if matched else others)[:n]
+    return articles
 
 
 def fetch_stock_news(n: int = 5) -> list[dict]:
+    """RSS 수집 → KoBERT 어린이 적합성 필터 → 상위 n건 반환."""
     from concurrent.futures import ThreadPoolExecutor, as_completed
-    per_feed = max(1, (n + len(RSS_FEEDS) - 1) // len(RSS_FEEDS))
-    articles = []
+
+    # KoBERT 필터 손실을 고려해 피드당 넉넉하게 수집
+    per_feed = max(n, n * 3 // len(RSS_FEEDS))
+    raw = []
     with ThreadPoolExecutor(max_workers=len(RSS_FEEDS)) as pool:
         futures = [pool.submit(_parse_rss, url, per_feed) for url in RSS_FEEDS]
         for fut in as_completed(futures):
-            articles.extend(fut.result())
-    return articles[:n]
+            raw.extend(fut.result())
+
+    # KoBERT 적합성 필터
+    filtered = [a for a in raw if _is_child_appropriate(a["title"], a["description"])]
+
+    # 필터 후 기사가 부족하면 미분류 기사로 보충
+    if len(filtered) < n:
+        remaining = [a for a in raw if a not in filtered]
+        filtered.extend(remaining[: n - len(filtered)])
+
+    return filtered[:n]
 
 
 def summarize_news_for_kids(
