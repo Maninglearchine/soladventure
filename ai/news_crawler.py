@@ -1,7 +1,7 @@
 """
 Korean stock news crawler + child-friendly summarizer (OpenAI).
 KoBERT 기반 어린이 적합성 필터 적용 (maninglearchine/kobert-article-classifier)
-네이버 경제 뉴스 8개 섹션 크롤링 방식
+매일경제(mk.co.kr) 5개 섹션 + 한국경제(hankyung.com) 경제 섹션 크롤링
 """
 
 import re
@@ -12,17 +12,45 @@ import requests
 from bs4 import BeautifulSoup
 import openai
 
-# 네이버 경제 뉴스 섹션 sid2 → 섹션명
-NAVER_SECTIONS = {
-    259: "금융",
-    258: "증권",
-    261: "산업/재계",
-    771: "중기/벤처",
-    260: "부동산",
-    262: "글로벌경제",
-    310: "생활경제",
-    263: "경제일반",
-}
+# 크롤링 대상 사이트 목록
+SOURCE_SITES = [
+    {
+        "name": "MK경제",
+        "url": "https://www.mk.co.kr/news/economy",
+        "base": "https://www.mk.co.kr",
+        "body_sel": "div.news_cnt_detail_wrap",
+    },
+    {
+        "name": "MK금융",
+        "url": "https://www.mk.co.kr/news/financial",
+        "base": "https://www.mk.co.kr",
+        "body_sel": "div.news_cnt_detail_wrap",
+    },
+    {
+        "name": "MK기업",
+        "url": "https://www.mk.co.kr/news/business",
+        "base": "https://www.mk.co.kr",
+        "body_sel": "div.news_cnt_detail_wrap",
+    },
+    {
+        "name": "MK증권",
+        "url": "https://www.mk.co.kr/news/stock",
+        "base": "https://www.mk.co.kr",
+        "body_sel": "div.news_cnt_detail_wrap",
+    },
+    {
+        "name": "MK부동산",
+        "url": "https://www.mk.co.kr/news/realestate",
+        "base": "https://www.mk.co.kr",
+        "body_sel": "div.news_cnt_detail_wrap",
+    },
+    {
+        "name": "한국경제",
+        "url": "https://www.hankyung.com/economy",
+        "base": "https://www.hankyung.com",
+        "body_sel": "div#articletxt",
+    },
+]
 
 HEADERS = {
     "User-Agent": (
@@ -30,7 +58,6 @@ HEADERS = {
         "AppleWebKit/537.36 (KHTML, like Gecko) "
         "Chrome/124.0.0.0 Safari/537.36"
     ),
-    "Referer": "https://news.naver.com/",
     "Accept-Language": "ko-KR,ko;q=0.9",
 }
 
@@ -70,29 +97,49 @@ def _is_child_appropriate(title: str, description: str) -> bool:
     return result["label"] == "적절"
 
 
-def _fetch_section_links(sid2: int, per_section: int) -> list[dict]:
-    """네이버 섹션 목록 페이지에서 기사 링크를 수집한다."""
-    url = f"https://news.naver.com/main/list.naver?mode=LS2D&mid=shm&sid1=101&sid2={sid2}"
+def _fetch_section_links(site: dict, per_section: int) -> list[dict]:
+    """섹션 목록 페이지에서 기사 링크를 수집한다 (MK·한국경제 공용)."""
     try:
-        r = requests.get(url, headers=HEADERS, timeout=10)
+        hdrs = {**HEADERS, "Referer": site["base"] + "/"}
+        r = requests.get(site["url"], headers=hdrs, timeout=10)
         soup = BeautifulSoup(r.text, "html.parser")
     except Exception:
         return []
 
     articles, seen = [], set()
-    for a in soup.select("a[href*='mnews/article/']"):
-        href = a.get("href", "")
-        if "comment" in href or href in seen:
+    for a in soup.find_all("a", href=True):
+        href = a.get("href", "").split("#")[0].strip()  # 앵커(#...) 제거
+        if not href:
             continue
+
+        # 절대 URL 정규화
+        if href.startswith("/"):
+            href = site["base"] + href
+        elif not href.startswith("http"):
+            continue
+
         title = a.get_text(strip=True)
         if not title or len(title) < 8:
             continue
-        # 동영상 뉴스 항목 제외 (제목이 재생시간 형태)
-        if re.search(r"동영상뉴스|재생시간", title):
+        if re.search(r"동영상|재생시간|\[광고\]", title):
             continue
+        if href in seen:
+            continue
+
+        # MK: /news/카테고리/숫자(5자리+) 패턴
+        # 한국경제: hankyung.com/article/숫자 패턴
+        is_mk  = bool(re.search(r'/news/\w+/\d{5,}', href))
+        is_hk  = bool(re.search(r'hankyung\.com/article/\d', href))
+        if not (is_mk or is_hk):
+            continue
+
         seen.add(href)
-        link = href if href.startswith("http") else "https://n.news.naver.com" + href
-        articles.append({"title": title, "description": "", "link": link})
+        articles.append({
+            "title": title,
+            "description": "",
+            "link": href,
+            "body_sel": site["body_sel"],
+        })
         if len(articles) >= per_section:
             break
     return articles
@@ -104,7 +151,8 @@ def _fetch_body(article: dict) -> dict:
         time.sleep(random.uniform(0.05, 0.15))
         r = requests.get(article["link"], headers=HEADERS, timeout=10)
         soup = BeautifulSoup(r.text, "html.parser")
-        el = soup.select_one("#dic_area")
+        sel = article.get("body_sel", "div.news_cnt_detail_wrap")
+        el = soup.select_one(sel)
         article["description"] = el.get_text(" ", strip=True)[:400] if el else article["title"]
     except Exception:
         article["description"] = article["title"]
@@ -112,17 +160,17 @@ def _fetch_body(article: dict) -> dict:
 
 
 def fetch_stock_news(n: int = 5) -> list[dict]:
-    """네이버 경제 섹션 크롤링 → KoBERT 필터 → 상위 n건 반환."""
+    """MK·한국경제 섹션 크롤링 → KoBERT 필터 → 상위 n건 반환."""
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
     # 섹션당 수집량: KoBERT 필터 손실을 고려해 넉넉하게
-    per_section = max(2, (n * 3 + len(NAVER_SECTIONS) - 1) // len(NAVER_SECTIONS))
+    per_section = max(2, (n * 3 + len(SOURCE_SITES) - 1) // len(SOURCE_SITES))
 
     # 1단계: 섹션별 기사 링크 병렬 수집
     raw: list[dict] = []
-    with ThreadPoolExecutor(max_workers=len(NAVER_SECTIONS)) as pool:
-        futs = {pool.submit(_fetch_section_links, sid2, per_section): sid2
-                for sid2 in NAVER_SECTIONS}
+    with ThreadPoolExecutor(max_workers=len(SOURCE_SITES)) as pool:
+        futs = {pool.submit(_fetch_section_links, site, per_section): site
+                for site in SOURCE_SITES}
         for fut in as_completed(futs):
             raw.extend(fut.result())
 
