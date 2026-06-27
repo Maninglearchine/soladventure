@@ -12,3 +12,8 @@ build/
 *.tmp
 faiss_index/
 *.lock
+progress.json
+data/news_articles.csv
+chart_*.png
+*_countplot.png
+kobert_eval.xlsx

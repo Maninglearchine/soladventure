@@ -483,8 +483,10 @@ def kick_preloads(gs) -> None:
     world = getattr(gs, "world", None)
     intro_step = st.session_state.get("intro_step", 0)
 
-    # 뉴스: 앱 시작 즉시
-    news_key = "_kids_news_cache"
+    # 뉴스: 앱 시작 즉시 (날짜 기반 캐시 키 — 매일 자동 갱신)
+    import datetime as _dt
+    _today = _dt.date.today().isoformat()
+    news_key = f"_kids_news_cache_{_today}"
     with _BG_LOCK:
         news_idle = news_key not in _BG_CACHE and news_key not in _BG_RUNNING
     if news_idle:
@@ -1810,7 +1812,8 @@ def page_news(gs: GameState):
     )
     st.divider()
 
-    cache_key = "_kids_news_cache"
+    import datetime as _dt
+    cache_key = f"_kids_news_cache_{_dt.date.today().isoformat()}"
     news_items = st.session_state.get(cache_key)
 
     if not news_items:
